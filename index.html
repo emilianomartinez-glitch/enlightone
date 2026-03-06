@@ -525,9 +525,9 @@ function renderKPIs() {
   const cards = [
     {label:'Proyectos',value:p.length,sub:'portafolio',cls:'c-neutral'},
     {label:'Cuentas',value:cuentas,sub:'únicas',cls:'c-neutral'},
-    {label:'Potencia FV',value:potFV.toFixed(0)+' kWp',sub:'total fotovoltaica',cls:'c-neutral'},
-    {label:'Potencia BESS',value:potBESS.toFixed(0)+' kW',sub:'almacenamiento',cls:'c-neutral'},
-    {label:'Capacidad BESS',value:capBESS.toFixed(0)+' kWh',sub:'almacenamiento',cls:'c-neutral'},
+    {label:'Potencia FV',value:fmtNum(potFV)+' kWp',sub:'total fotovoltaica',cls:'c-neutral'},
+    {label:'Potencia BESS',value:fmtNum(potBESS)+' kW',sub:'almacenamiento',cls:'c-neutral'},
+    {label:'Capacidad BESS',value:fmtNum(capBESS)+' kWh',sub:'almacenamiento',cls:'c-neutral'},
     {label:'SPI Portafolio',value:globalSPI!==null?globalSPI.toFixed(2):'—',sub:globalSPI>=0.9?'En control':globalSPI>=0.7?'En riesgo':'Crítico',cls:'c-spi'},
     {label:'Atrasados',value:tot('atrasados'),sub:'hitos vencidos',cls:'c-danger'},
     {label:'Con retraso',value:tot('conRetraso'),sub:'fuera de fecha',cls:'c-warn'},
@@ -741,6 +741,7 @@ function renderPMTable(){
 // ─── HELPERS ─────────────────────────────────
 function destroyChart(id){if(charts[id]){charts[id].destroy();charts[id]=null;}}
 function countBy(arr,key){const o={};arr.forEach(i=>{const v=i[key]||'(vacío)';o[v]=(o[v]||0)+1;});return o;}
+function fmtNum(n){return n.toLocaleString('en-US',{maximumFractionDigits:1});}
 function trunc(s,n){return s?.length>n?s.slice(0,n)+'…':s||'';}
 function esc(s){if(!s)return'';const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
 
