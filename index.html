@@ -420,6 +420,8 @@ async function fetchData() {
 function buildFilters() {
   const bar = document.getElementById('filtersBar');
   const defs = [
+    {key:'proj',label:'PROJ',values:rawData.filtros.projs||[]},
+    {key:'sitio',label:'Sitio',values:rawData.filtros.sitios||[]},
     {key:'pm',label:'Project Manager',values:rawData.filtros.pms},
     {key:'cuenta',label:'Cuenta',values:rawData.filtros.cuentas},
     {key:'tipo',label:'Tipo',values:rawData.filtros.tipos},
