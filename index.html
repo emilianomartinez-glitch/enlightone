@@ -91,6 +91,9 @@ header { padding:16px 28px 0; background:linear-gradient(180deg,rgba(0,170,133,0
 .kpi-card.c-neutral::before { background:var(--teal); }
 .kpi-card.c-spi::before { background:#9f7aff; }
 .kpi-card:hover { border-color:var(--teal); }
+.kpi-clickable { cursor:pointer; transition:all .2s; }
+.kpi-clickable:hover { transform:translateY(-2px); box-shadow:0 4px 12px rgba(0,0,0,0.3); }
+.kpi-clickable.active-filter { border-color:var(--accent) !important; box-shadow:0 0 0 1px var(--accent), 0 4px 12px rgba(0,170,133,0.15); }
 .kpi-label { font-family:var(--font-display); font-weight:500; font-size:8px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text2); margin-bottom:5px; }
 .kpi-value { font-family:var(--font-display); font-weight:800; font-size:28px; line-height:1; margin-bottom:2px; }
 .kpi-card.c-danger .kpi-value { color:var(--danger); }
@@ -292,6 +295,7 @@ footer { padding:10px 28px; border-top:1px solid var(--border); display:flex; ju
 
     <!-- ═══════════ TAB 2: RENDIMIENTO ═══════════ -->
     <div class="tab-content" id="tab2">
+      <div class="filters-bar" id="filtersBar2"></div>
       <div class="section-label">Indicadores de rendimiento</div>
       <div class="kpi-grid" id="kpiGrid2" style="grid-template-columns:repeat(4,1fr);"></div>
 
@@ -354,6 +358,12 @@ const DEMO_MODE = false;
 let rawData = null, filteredProyectos = [], charts = {}, sortState = { col:null, asc:true };
 let chartFilter = null; // {key:'faseActual', value:'Fase Instalación', source:'chartFases'}
 let chartFilterSource = null; // which chart triggered the filter (skip re-rendering it)
+let kpiFilter = null; // 'atrasados' | 'conRetraso' | 'pendientes' | 'aTiempo' | null
+
+function toggleKpiFilter(key) {
+  kpiFilter = (kpiFilter === key) ? null : key;
+  applyFilters();
+}
 
 Chart.defaults.color = '#828080';
 Chart.defaults.borderColor = 'rgba(41,60,71,0.5)';
@@ -418,7 +428,6 @@ async function fetchData() {
 
 // ─── FILTERS ─────────────────────────────────
 function buildFilters() {
-  const bar = document.getElementById('filtersBar');
   const defs = [
     {key:'proj',label:'PROJ',values:rawData.filtros.projs||[]},
     {key:'sitio',label:'Sitio',values:rawData.filtros.sitios||[]},
@@ -429,29 +438,48 @@ function buildFilters() {
     {key:'supervisor',label:'Supervisor',values:rawData.filtros.supervisores||[]},
     {key:'entidadFed',label:'Entidad',values:rawData.filtros.entidades||[]},
   ];
-  bar.innerHTML = '';
-  defs.forEach(f => {
-    if(!f.values?.length) return;
-    const g=document.createElement('div'); g.className='filter-group';
-    const s=document.createElement('select'); s.className='filter-select'; s.dataset.filterKey=f.key;
-    s.innerHTML=`<option value="">${f.label}</option>`+f.values.map(v=>`<option value="${v}">${v}</option>`).join('');
-    s.addEventListener('change',()=>{chartFilter=null;chartFilterSource=null;applyFilters();});
-    g.appendChild(s); bar.appendChild(g);
+  ['filtersBar','filtersBar2'].forEach(barId => {
+    const bar = document.getElementById(barId);
+    if (!bar) return;
+    bar.innerHTML = '';
+    defs.forEach(f => {
+      if(!f.values?.length) return;
+      const g=document.createElement('div'); g.className='filter-group';
+      const s=document.createElement('select'); s.className='filter-select'; s.dataset.filterKey=f.key;
+      s.innerHTML=`<option value="">${f.label}</option>`+f.values.map(v=>`<option value="${v}">${v}</option>`).join('');
+      s.addEventListener('change',()=>{syncFilters(barId,f.key,s.value);chartFilter=null;chartFilterSource=null;kpiFilter=null;applyFilters();});
+      g.appendChild(s); bar.appendChild(g);
+    });
+    if (barId==='filtersBar') { const cfSpan=document.createElement('span'); cfSpan.id='chartFilterChip'; bar.appendChild(cfSpan); }
+    const rb=document.createElement('button'); rb.className='filter-reset'; rb.textContent='✕ Limpiar';
+    rb.addEventListener('click',()=>{document.querySelectorAll('.filter-select').forEach(s=>s.value='');chartFilter=null;chartFilterSource=null;kpiFilter=null;applyFilters();});
+    bar.appendChild(rb);
   });
-  // Chart filter chip placeholder
-  const cfSpan = document.createElement('span'); cfSpan.id='chartFilterChip'; bar.appendChild(cfSpan);
-  // Reset button
-  const rb=document.createElement('button'); rb.className='filter-reset'; rb.textContent='✕ Limpiar';
-  rb.addEventListener('click',()=>{bar.querySelectorAll('select').forEach(s=>s.value='');chartFilter=null;chartFilterSource=null;applyFilters();}); bar.appendChild(rb);
   renderChartFilterChip();
+}
+
+function syncFilters(sourceBarId, key, value) {
+  const targetBarId = sourceBarId==='filtersBar'?'filtersBar2':'filtersBar';
+  const targetBar = document.getElementById(targetBarId);
+  if (!targetBar) return;
+  targetBar.querySelectorAll('.filter-select').forEach(s => {
+    if (s.dataset.filterKey===key) s.value=value;
+  });
 }
 
 function renderChartFilterChip() {
   const el = document.getElementById('chartFilterChip');
   if (!el) return;
-  if (!chartFilter) { el.innerHTML = ''; return; }
-  const labels = {faseActual:'Fase',pm:'PM',cuenta:'Cuenta',supervisor:'Supervisor',entidadFed:'Entidad',tipoProv:'Proveeduría',tipo:'Tipo'};
-  el.innerHTML = `<span class="chart-filter-chip" onclick="clearChartFilter()">${labels[chartFilter.key]||chartFilter.key}: ${chartFilter.value} <span class="x">✕</span></span>`;
+  let html = '';
+  if (chartFilter) {
+    const labels = {faseActual:'Fase',pm:'PM',cuenta:'Cuenta',supervisor:'Supervisor',entidadFed:'Entidad',tipoProv:'Proveeduría',tipo:'Tipo',proj:'PROJ',sitio:'Sitio'};
+    html += `<span class="chart-filter-chip" onclick="clearChartFilter()">${labels[chartFilter.key]||chartFilter.key}: ${chartFilter.value} <span class="x">✕</span></span> `;
+  }
+  if (kpiFilter) {
+    const kpiLabels = {atrasados:'Atrasados',conRetraso:'Con retraso',pendientes:'Pendientes',aTiempo:'A tiempo'};
+    html += `<span class="chart-filter-chip" onclick="kpiFilter=null;applyFilters();">Hitos: ${kpiLabels[kpiFilter]} <span class="x">✕</span></span>`;
+  }
+  el.innerHTML = html;
 }
 
 function clearChartFilter() {
@@ -472,12 +500,25 @@ function setChartFilter(key, value, sourceChartId) {
 
 function applyFilters() {
   const filters={};
-  document.querySelectorAll('.filter-select').forEach(s=>{if(s.value)filters[s.dataset.filterKey]=s.value;});
+  // Deduplicate: both bars have same keys, just take unique values
+  const seen={};
+  document.querySelectorAll('.filter-select').forEach(s=>{if(s.value && !seen[s.dataset.filterKey]){filters[s.dataset.filterKey]=s.value;seen[s.dataset.filterKey]=true;}});
   // Combine dropdown filters + chart filter
   if (chartFilter) filters[chartFilter.key] = chartFilter.value;
   filteredProyectos=rawData.proyectos.filter(p=>Object.entries(filters).every(([k,v])=>p[k]===v));
+  // KPI filter: show only projects that have >0 of that status
+  if (kpiFilter) {
+    filteredProyectos = filteredProyectos.filter(p => p.conteos[kpiFilter] > 0);
+  }
   renderChartFilterChip();
   renderAll();
+  // Highlight active KPI card
+  document.querySelectorAll('.kpi-clickable').forEach(el => el.classList.remove('active-filter'));
+  if (kpiFilter) {
+    document.querySelectorAll('.kpi-clickable').forEach(el => {
+      if (el.getAttribute('onclick')?.includes(kpiFilter)) el.classList.add('active-filter');
+    });
+  }
 }
 
 // ─── SPI CALCULATION ─────────────────────────
@@ -525,19 +566,19 @@ function renderKPIs() {
   const globalSPI = calcSPI(globalConteos);
 
   const cards = [
-    {label:'Proyectos',value:p.length,sub:'portafolio',cls:'c-neutral'},
-    {label:'Cuentas',value:cuentas,sub:'únicas',cls:'c-neutral'},
-    {label:'Potencia FV',value:fmtNum(potFV)+' kWp',sub:'total fotovoltaica',cls:'c-neutral'},
-    {label:'Potencia BESS',value:fmtNum(potBESS)+' kW',sub:'almacenamiento',cls:'c-neutral'},
-    {label:'Capacidad BESS',value:fmtNum(capBESS)+' kWh',sub:'almacenamiento',cls:'c-neutral'},
-    {label:'SPI Portafolio',value:globalSPI!==null?globalSPI.toFixed(2):'—',sub:globalSPI>=0.9?'En control':globalSPI>=0.7?'En riesgo':'Crítico',cls:'c-spi'},
-    {label:'Atrasados',value:tot('atrasados'),sub:'hitos vencidos',cls:'c-danger'},
-    {label:'Con retraso',value:tot('conRetraso'),sub:'fuera de fecha',cls:'c-warn'},
-    {label:'Pendientes',value:tot('pendientes'),sub:'en espera',cls:'c-pending'},
-    {label:'A tiempo',value:tot('aTiempo'),sub:'en fecha',cls:'c-accent'},
+    {label:'Proyectos',value:p.length,sub:'portafolio',cls:'c-neutral',fk:null},
+    {label:'Cuentas',value:cuentas,sub:'únicas',cls:'c-neutral',fk:null},
+    {label:'Potencia FV',value:fmtNum(potFV)+' kWp',sub:'total fotovoltaica',cls:'c-neutral',fk:null},
+    {label:'Potencia BESS',value:fmtNum(potBESS)+' kW',sub:'almacenamiento',cls:'c-neutral',fk:null},
+    {label:'Capacidad BESS',value:fmtNum(capBESS)+' kWh',sub:'almacenamiento',cls:'c-neutral',fk:null},
+    {label:'SPI Portafolio',value:globalSPI!==null?globalSPI.toFixed(2):'—',sub:globalSPI>=0.9?'En control':globalSPI>=0.7?'En riesgo':'Crítico',cls:'c-spi',fk:null},
+    {label:'Atrasados',value:tot('atrasados'),sub:'hitos vencidos',cls:'c-danger',fk:'atrasados'},
+    {label:'Con retraso',value:tot('conRetraso'),sub:'fuera de fecha',cls:'c-warn',fk:'conRetraso'},
+    {label:'Pendientes',value:tot('pendientes'),sub:'en espera',cls:'c-pending',fk:'pendientes'},
+    {label:'A tiempo',value:tot('aTiempo'),sub:'en fecha',cls:'c-accent',fk:'aTiempo'},
   ];
   document.getElementById('kpiGrid').innerHTML = cards.map((c,i)=>`
-    <div class="kpi-card ${c.cls} animate-in" style="animation-delay:${i*0.03}s">
+    <div class="kpi-card ${c.cls} animate-in${c.fk?' kpi-clickable':''}${c.fk&&kpiFilter===c.fk?' active-filter':''}" style="animation-delay:${i*0.03}s"${c.fk?` onclick="toggleKpiFilter('${c.fk}')"`:''}>
       <div class="kpi-label">${c.label}</div>
       <div class="kpi-value" style="font-size:${String(c.value).length>7?22:28}px">${c.value}</div>
       <div class="kpi-sub">${c.sub}</div>
