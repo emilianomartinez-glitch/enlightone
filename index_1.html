@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Enlight · Dashboard Proyectos</title>
+<link href="https://fonts.googleapis.com/css2?family=Alexandria:wght@300;400;500;600;700;800&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --c1: #293C47; --c2: #00AA85; --c3: #3D7D80; --c4: #121926; --c5: #828080;
+  --c1-40: rgba(41,60,71,0.4); --c2-40: rgba(0,170,133,0.4); --c3-40: rgba(61,125,128,0.4);
+  --c1-20: rgba(41,60,71,0.2); --c2-20: rgba(0,170,133,0.2); --c3-20: rgba(61,125,128,0.2);
+  --bg: #0c1117; --surface: #121926; --surface2: #1a2332;
+  --border: #293C47; --border2: rgba(61,125,128,0.3);
+  --accent: #00AA85; --accent-dim: rgba(0,170,133,0.15); --accent-bright: #00ddaa;
+  --warn: #ff9f43; --danger: #ff4757; --text: #e4e8ec; --text2: #828080; --text3: #5a5858;
+  --pending: #4c9fff; --teal: #3D7D80;
+  --font-display: 'Alexandria', sans-serif; --font-body: 'Roboto', sans-serif;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior:smooth; }
+body { font-family:var(--font-body); background:var(--bg); color:var(--text); min-height:100vh; overflow-x:hidden; font-size:12px; }
+body::before { content:''; position:fixed; inset:0; background-image:linear-gradient(rgba(0,170,133,0.012) 1px,transparent 1px),linear-gradient(90deg,rgba(0,170,133,0.012) 1px,transparent 1px); background-size:60px 60px; pointer-events:none; z-index:0; }
+.shell { position:relative; z-index:1; }
+::-webkit-scrollbar { width:5px; height:5px; }
+::-webkit-scrollbar-track { background:var(--bg); }
+::-webkit-scrollbar-thumb { background:var(--c1); border-radius:3px; }
+
+/* ── HEADER ─────────────────────── */
+header { padding:16px 28px 0; background:linear-gradient(180deg,rgba(0,170,133,0.04) 0%,transparent 100%); }
+.header-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+.logo-area { display:flex; align-items:center; gap:12px; }
+.logo-mark { font-family:var(--font-display); font-weight:800; font-size:18px; color:var(--accent); }
+.logo-sub { font-family:var(--font-body); font-size:10px; color:var(--text2); letter-spacing:2px; text-transform:uppercase; }
+.header-meta { display:flex; align-items:center; gap:16px; }
+.live-badge { display:flex; align-items:center; gap:5px; font-size:9px; letter-spacing:2px; color:var(--accent); text-transform:uppercase; }
+.live-dot { width:5px; height:5px; border-radius:50%; background:var(--accent); animation:pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1);} 50%{opacity:.3;transform:scale(.6);} }
+.date-display { font-size:10px; color:var(--text2); }
+.refresh-btn { background:transparent; border:1px solid var(--border); color:var(--text2); font-family:var(--font-body); font-size:9px; letter-spacing:1px; text-transform:uppercase; padding:4px 10px; cursor:pointer; transition:all .2s; }
+.refresh-btn:hover { border-color:var(--accent); color:var(--accent); }
+.refresh-btn.loading { opacity:.5; pointer-events:none; }
+.last-update { font-size:9px; color:var(--text3); }
+
+/* ── TABS ───────────────────────── */
+.tabs { display:flex; border-bottom:1px solid var(--border); }
+.tab-btn { font-family:var(--font-display); font-weight:600; font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--text2); background:transparent; border:none; padding:10px 22px; cursor:pointer; position:relative; transition:color .2s; }
+.tab-btn:hover { color:var(--text); }
+.tab-btn.active { color:var(--accent); }
+.tab-btn.active::after { content:''; position:absolute; bottom:-1px; left:0; right:0; height:2px; background:var(--accent); }
+
+/* ── MAIN ───────────────────────── */
+.main { padding:18px 28px; }
+.tab-content { display:none; }
+.tab-content.active { display:block; }
+
+/* ── FILTERS ────────────────────── */
+.filters-bar { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px; align-items:center; }
+.filter-group { position:relative; }
+.filter-select { font-family:var(--font-body); font-size:10px; color:var(--text2); background:var(--surface); border:1px solid var(--border); padding:5px 24px 5px 10px; cursor:pointer; appearance:none; -webkit-appearance:none; min-width:120px; transition:border-color .2s; border-radius:2px; }
+.filter-select:hover,.filter-select:focus { border-color:var(--accent); color:var(--text); outline:none; }
+.filter-group::after { content:'▾'; position:absolute; right:8px; top:50%; transform:translateY(-50%); font-size:7px; color:var(--text3); pointer-events:none; }
+.filter-reset { font-family:var(--font-body); font-size:9px; letter-spacing:1px; text-transform:uppercase; color:var(--text3); background:transparent; border:1px dashed var(--border); padding:5px 12px; cursor:pointer; transition:all .2s; border-radius:2px; }
+.filter-reset:hover { border-color:var(--danger); color:var(--danger); }
+
+.chart-filter-chip {
+  display:inline-flex; align-items:center; gap:5px;
+  font-family:var(--font-body); font-size:9px; letter-spacing:1px;
+  color:var(--accent); background:var(--accent-dim);
+  border:1px solid rgba(0,170,133,0.35); padding:4px 10px 4px 8px;
+  border-radius:2px; cursor:pointer; transition:all .2s; text-transform:uppercase;
+}
+.chart-filter-chip:hover { background:rgba(0,170,133,0.25); border-color:var(--accent); }
+.chart-filter-chip .x { font-size:11px; font-weight:700; margin-left:2px; }
+
+.chart-card canvas { cursor:pointer; }
+
+/* ── SECTION LABEL ──────────────── */
+.section-label { font-family:var(--font-display); font-weight:600; font-size:9px; letter-spacing:2.5px; text-transform:uppercase; color:var(--text3); margin-bottom:10px; display:flex; align-items:center; gap:10px; }
+.section-label::after { content:''; flex:1; height:1px; background:var(--border); }
+
+/* ── KPI CARDS ──────────────────── */
+.kpi-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin-bottom:18px; }
+.kpi-card { background:var(--surface); border:1px solid var(--border); padding:12px 14px; position:relative; overflow:hidden; transition:border-color .2s; border-radius:3px; }
+.kpi-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; }
+.kpi-card.c-danger::before { background:var(--danger); }
+.kpi-card.c-warn::before { background:var(--warn); }
+.kpi-card.c-pending::before { background:var(--pending); }
+.kpi-card.c-accent::before { background:var(--accent); }
+.kpi-card.c-neutral::before { background:var(--teal); }
+.kpi-card.c-spi::before { background:#9f7aff; }
+.kpi-card:hover { border-color:var(--teal); }
+.kpi-label { font-family:var(--font-display); font-weight:500; font-size:8px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text2); margin-bottom:5px; }
+.kpi-value { font-family:var(--font-display); font-weight:800; font-size:28px; line-height:1; margin-bottom:2px; }
+.kpi-card.c-danger .kpi-value { color:var(--danger); }
+.kpi-card.c-warn .kpi-value { color:var(--warn); }
+.kpi-card.c-pending .kpi-value { color:var(--pending); }
+.kpi-card.c-accent .kpi-value { color:var(--accent); }
+.kpi-card.c-neutral .kpi-value { color:var(--text); }
+.kpi-card.c-spi .kpi-value { color:#9f7aff; }
+.kpi-sub { font-size:8px; color:var(--text3); }
+
+/* ── CHART GRID ─────────────────── */
+.charts-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; }
+.charts-row-4 { display:grid; grid-template-columns:2fr 1fr 1fr 1fr; gap:10px; margin-bottom:16px; }
+.charts-row-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:16px; }
+.chart-card { background:var(--surface); border:1px solid var(--border); padding:14px 16px; border-radius:3px; }
+.chart-card.span2 { grid-column:span 2; }
+.chart-title { font-family:var(--font-display); font-weight:700; font-size:11px; margin-bottom:2px; color:var(--text); }
+.chart-desc { font-size:9px; color:var(--text3); margin-bottom:10px; }
+.chart-wrapper { position:relative; width:100%; }
+.chart-wrapper canvas { width:100% !important; }
+
+/* ── TABLE ──────────────────────── */
+.table-card { background:var(--surface); border:1px solid var(--border); overflow:hidden; border-radius:3px; }
+.table-header { padding:10px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; background:var(--surface2); }
+.table-title { font-family:var(--font-display); font-weight:700; font-size:12px; }
+.table-count { font-size:10px; color:var(--text2); margin-left:8px; }
+.table-scroll { overflow-x:auto; max-height:360px; overflow-y:auto; }
+.data-table { width:100%; border-collapse:collapse; font-size:11px; }
+.data-table th { padding:7px 10px; text-align:left; font-family:var(--font-display); font-weight:600; font-size:8px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text3); border-bottom:1px solid var(--border); white-space:nowrap; background:var(--surface2); position:sticky; top:0; cursor:pointer; user-select:none; transition:color .15s; z-index:2; }
+.data-table th:hover { color:var(--accent); }
+.data-table th.sorted { color:var(--accent); }
+.data-table th .sort-arrow { margin-left:3px; font-size:7px; }
+.data-table td { padding:6px 10px; border-bottom:1px solid rgba(41,60,71,0.3); white-space:nowrap; color:var(--text); font-size:10px; }
+.data-table tr:hover td { background:rgba(0,170,133,0.03); }
+.proj-id { font-family:var(--font-display); font-weight:700; color:var(--accent); font-size:10px; }
+.mini-badge { font-size:9px; padding:1px 6px; letter-spacing:.3px; display:inline-block; min-width:20px; text-align:center; border-radius:2px; }
+.badge-danger { background:rgba(255,71,87,0.12); color:var(--danger); border:1px solid rgba(255,71,87,0.2); }
+.badge-warn { background:rgba(255,159,67,0.12); color:var(--warn); border:1px solid rgba(255,159,67,0.2); }
+.badge-pending { background:rgba(76,159,255,0.12); color:var(--pending); border:1px solid rgba(76,159,255,0.2); }
+.badge-accent { background:var(--c2-20); color:var(--accent); border:1px solid rgba(0,170,133,0.25); }
+.badge-spi { background:rgba(159,122,255,0.12); color:#9f7aff; border:1px solid rgba(159,122,255,0.25); }
+.progress-cell { display:flex; align-items:center; gap:6px; }
+.mini-bar { width:48px; height:3px; background:var(--border); position:relative; overflow:hidden; border-radius:1px; }
+.mini-bar-fill { height:100%; background:var(--accent); position:absolute; left:0; top:0; transition:width .6s ease; }
+.progress-pct { font-size:9px; color:var(--text2); min-width:28px; }
+
+/* SPI gauge mini */
+.spi-indicator { display:inline-flex; align-items:center; gap:4px; }
+.spi-dot { width:6px; height:6px; border-radius:50%; }
+.spi-good { background:var(--accent); }
+.spi-warn { background:var(--warn); }
+.spi-bad { background:var(--danger); }
+
+/* ── LOADING ────────────────────── */
+.loading-overlay { position:fixed; inset:0; background:var(--bg); display:flex; align-items:center; justify-content:center; z-index:1000; transition:opacity .4s; }
+.loading-overlay.hidden { opacity:0; pointer-events:none; }
+.loading-spinner { text-align:center; }
+.loading-spinner .logo { font-family:var(--font-display); font-weight:800; font-size:22px; color:var(--accent); margin-bottom:14px; }
+.loading-spinner .bar { width:100px; height:2px; background:var(--border); margin:0 auto; overflow:hidden; position:relative; }
+.loading-spinner .bar::after { content:''; position:absolute; width:36px; height:100%; background:var(--accent); animation:loadSlide 1s ease infinite; }
+@keyframes loadSlide { 0%{left:-36px;} 100%{left:100px;} }
+.loading-text { font-size:10px; color:var(--text3); letter-spacing:2px; text-transform:uppercase; margin-top:12px; }
+
+footer { padding:10px 28px; border-top:1px solid var(--border); display:flex; justify-content:space-between; font-size:9px; color:var(--text3); letter-spacing:1px; }
+
+@keyframes fadeUp { from{opacity:0;transform:translateY(8px);} to{opacity:1;transform:translateY(0);} }
+.animate-in { animation:fadeUp .35s ease both; }
+
+@media (max-width:1400px) { .kpi-grid{grid-template-columns:repeat(5,1fr);} .charts-row-4{grid-template-columns:1fr 1fr;} .charts-row-3{grid-template-columns:1fr 1fr;} }
+@media (max-width:1100px) { .kpi-grid{grid-template-columns:repeat(3,1fr);} }
+@media (max-width:900px) { .charts-row,.charts-row-4,.charts-row-3{grid-template-columns:1fr;} .kpi-grid{grid-template-columns:repeat(2,1fr);} header,.main,footer{padding-left:16px;padding-right:16px;} }
+</style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-spinner">
+    <div class="logo"><img src="https://drive.google.com/uc?export=view&id=1vkjBYsrtSnPlJz0Fg0633RDrjM0BlkaC" alt="Enlight 15 años" style="height:36px;width:auto;"></div>
+    <div class="bar"></div>
+    <div class="loading-text">Cargando datos…</div>
+  </div>
+</div>
+
+<div class="shell">
+  <header>
+    <div class="header-top">
+      <div class="logo-area">
+        <img src="https://drive.google.com/uc?export=view&id=1vkjBYsrtSnPlJz0Fg0633RDrjM0BlkaC" alt="Enlight 15 años" style="height:32px;width:auto;display:block;">
+        <span class="logo-sub">Panel de Control · Proyectos</span>
+      </div>
+      <div class="header-meta">
+        <div class="live-badge"><span class="live-dot"></span> En vivo</div>
+        <div class="date-display" id="fechaHoy"></div>
+        <button class="refresh-btn" id="btnRefresh" onclick="fetchData()">↻ Actualizar</button>
+        <span class="last-update" id="lastUpdate"></span>
+      </div>
+    </div>
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="tab1">Estado General</button>
+      <button class="tab-btn" data-tab="tab2">Rendimiento y Desviaciones</button>
+    </div>
+  </header>
+
+  <div class="main">
+
+    <!-- ═══════════ TAB 1: ESTADO GENERAL ═══════════ -->
+    <div class="tab-content active" id="tab1">
+      <div class="filters-bar" id="filtersBar"></div>
+
+      <div class="section-label">Resumen general</div>
+      <div class="kpi-grid" id="kpiGrid"></div>
+
+      <!-- Row 1: Hitos + Fases + Proveeduría -->
+      <div class="section-label">Distribución del portafolio</div>
+      <div class="charts-row-4">
+        <div class="chart-card span2">
+          <div class="chart-title">Estatus por hito</div>
+          <div class="chart-desc">Distribución acumulada de cada hito</div>
+          <div class="chart-wrapper" style="height:260px"><canvas id="chartHitos"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Por fase</div>
+          <div class="chart-desc">Distribución actual</div>
+          <div class="chart-wrapper" style="height:220px"><canvas id="chartFases"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Por proveeduría</div>
+          <div class="chart-desc">Tipo de EPC</div>
+          <div class="chart-wrapper" style="height:220px"><canvas id="chartProv"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Row 2: PM + Entidad + Supervisor + Cuenta -->
+      <div class="charts-row-3">
+        <div class="chart-card">
+          <div class="chart-title">Por Project Manager</div>
+          <div class="chart-desc">Proyectos asignados</div>
+          <div class="chart-wrapper" style="height:170px"><canvas id="chartPM"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Por supervisor</div>
+          <div class="chart-desc">Distribución de carga</div>
+          <div class="chart-wrapper" style="height:170px"><canvas id="chartSupervisor"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Por cuenta</div>
+          <div class="chart-desc">Top cuentas por proyectos</div>
+          <div class="chart-wrapper" style="height:170px"><canvas id="chartCuenta"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Row 3: Entidad + SPI por PM -->
+      <div class="charts-row">
+        <div class="chart-card">
+          <div class="chart-title">Por entidad federativa</div>
+          <div class="chart-desc">Distribución geográfica</div>
+          <div class="chart-wrapper" style="height:170px"><canvas id="chartEntidad"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">SPI por Project Manager</div>
+          <div class="chart-desc">Schedule Performance Index — hitos cumplidos a tiempo / hitos vencidos</div>
+          <div class="chart-wrapper" style="height:170px"><canvas id="chartSpiPM"></canvas></div>
+        </div>
+      </div>
+
+      <!-- TABLE -->
+      <div class="section-label">Detalle de proyectos</div>
+      <div class="table-card">
+        <div class="table-header">
+          <div style="display:flex;align-items:baseline;gap:6px;">
+            <div class="table-title">Todos los proyectos</div>
+            <span class="table-count" id="tableCount"></span>
+          </div>
+        </div>
+        <div class="table-scroll">
+          <table class="data-table" id="projectTable">
+            <thead><tr>
+              <th data-sort="proj">PROJ <span class="sort-arrow"></span></th>
+              <th data-sort="sitio">Sitio <span class="sort-arrow"></span></th>
+              <th data-sort="cuenta">Cuenta <span class="sort-arrow"></span></th>
+              <th data-sort="pm">PM <span class="sort-arrow"></span></th>
+              <th data-sort="tipo">Tipo <span class="sort-arrow"></span></th>
+              <th data-sort="tecnologia">Tecno <span class="sort-arrow"></span></th>
+              <th data-sort="potenciaFV">kWp FV <span class="sort-arrow"></span></th>
+              <th data-sort="potenciaSTO">kW BESS <span class="sort-arrow"></span></th>
+              <th data-sort="pctProyecto">% Proy <span class="sort-arrow"></span></th>
+              <th data-sort="faseActual">Fase <span class="sort-arrow"></span></th>
+              <th data-sort="spi">SPI <span class="sort-arrow"></span></th>
+              <th data-sort="atrasados">Atr <span class="sort-arrow"></span></th>
+              <th data-sort="pendientes">Pend <span class="sort-arrow"></span></th>
+              <th data-sort="conRetraso">Ret <span class="sort-arrow"></span></th>
+              <th data-sort="aTiempo">OK <span class="sort-arrow"></span></th>
+            </tr></thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════ TAB 2: RENDIMIENTO ═══════════ -->
+    <div class="tab-content" id="tab2">
+      <div class="section-label">Indicadores de rendimiento</div>
+      <div class="kpi-grid" id="kpiGrid2" style="grid-template-columns:repeat(4,1fr);"></div>
+
+      <div class="section-label">Análisis de desviaciones</div>
+      <div class="charts-row">
+        <div class="chart-card">
+          <div class="chart-title">Desviación promedio por hito (días)</div>
+          <div class="chart-desc">Mayor desviación respecto a fecha prevista</div>
+          <div class="chart-wrapper" style="height:260px"><canvas id="chartDesviacion"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Rendimiento por PM</div>
+          <div class="chart-desc">% hitos a tiempo vs carga de proyectos</div>
+          <div class="chart-wrapper" style="height:260px"><canvas id="chartRendPM"></canvas></div>
+        </div>
+      </div>
+
+      <div class="charts-row">
+        <div class="chart-card">
+          <div class="chart-title">Proyectos por fase</div>
+          <div class="chart-desc">Proporción del portafolio</div>
+          <div class="chart-wrapper" id="treemapContainer" style="min-height:200px;"></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Hitos a tiempo por cuenta</div>
+          <div class="chart-desc">% cumplimiento a tiempo</div>
+          <div class="chart-wrapper" style="height:220px"><canvas id="chartCuentaRendimiento"></canvas></div>
+        </div>
+      </div>
+
+      <div class="section-label">Detalle por Project Manager</div>
+      <div class="table-card">
+        <div class="table-header"><div class="table-title">Resumen por PM</div></div>
+        <div class="table-scroll" style="max-height:300px;">
+          <table class="data-table" id="pmTable">
+            <thead><tr>
+              <th>PM</th><th>Proyectos</th><th>Evaluados</th>
+              <th>A tiempo</th><th>Retraso</th><th>Atrasados</th>
+              <th>Pend.</th><th>% A tiempo</th><th>SPI</th>
+            </tr></thead>
+            <tbody id="pmTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <footer>
+    <span><img src="https://drive.google.com/uc?export=view&id=1vkjBYsrtSnPlJz0Fg0633RDrjM0BlkaC" alt="Enlight" style="height:16px;width:auto;vertical-align:middle;margin-right:6px;">DASHBOARD PROYECTOS</span>
+    <span>PORTAFOLIO FV · DIRECCIÓN GENERAL</span>
+  </footer>
+</div>
+
+<script>
+const API_URL = ''; // ← n8n webhook URL
+const REFRESH_INTERVAL = 15 * 60 * 1000;
+const DEMO_MODE = true;
+
+let rawData = null, filteredProyectos = [], charts = {}, sortState = { col:null, asc:true };
+let chartFilter = null; // {key:'faseActual', value:'Fase Instalación', source:'chartFases'}
+let chartFilterSource = null; // which chart triggered the filter (skip re-rendering it)
+
+Chart.defaults.color = '#828080';
+Chart.defaults.borderColor = 'rgba(41,60,71,0.5)';
+Chart.defaults.font.family = "'Roboto', sans-serif";
+Chart.defaults.font.size = 10;
+Chart.defaults.plugins.legend.labels.boxWidth = 8;
+Chart.defaults.plugins.legend.labels.padding = 10;
+Chart.defaults.plugins.legend.labels.font = { size:9 };
+Chart.defaults.plugins.tooltip.backgroundColor = '#1a2332';
+Chart.defaults.plugins.tooltip.borderColor = '#293C47';
+Chart.defaults.plugins.tooltip.borderWidth = 1;
+Chart.defaults.plugins.tooltip.titleFont = { family:"'Alexandria',sans-serif", weight:700, size:11 };
+Chart.defaults.plugins.tooltip.bodyFont = { family:"'Roboto',sans-serif", size:10 };
+Chart.defaults.plugins.tooltip.padding = 8;
+Chart.defaults.plugins.tooltip.cornerRadius = 3;
+
+const COLORS = {
+  danger:'#ff4757', warn:'#ff9f43', pending:'#4c9fff',
+  accent:'#00AA85', teal:'#3D7D80', c1:'#293C47', spi:'#9f7aff',
+  palette:['#00AA85','#4c9fff','#ff9f43','#3D7D80','#ff4757','#00ddaa','#9f7aff','#ff7ab8','#7affee','#828080','#c4ff4c','#ff9f4c']
+};
+
+const HITOS_NAMES = [
+  'Aprobación de Componentes Críticos','Entrega Ingenierías','Ingeniería Aprobada por el Cliente',
+  'Comité de Márgenes','Compra de Materiales','Inicio de Instalación','Commissioning',
+  'Visita Calidad a Sitio','Entrega al Cliente','Pase a Servicios/Fin de Relación',
+  'Pase a Gestión','Cierre Presupuestal','Interconexión'
+];
+
+// ─── INIT ────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  renderDate(); initTabs(); initTableSort(); fetchData();
+  setInterval(fetchData, REFRESH_INTERVAL);
+});
+
+function renderDate() {
+  document.getElementById('fechaHoy').textContent = new Date().toLocaleDateString('es-MX',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+}
+
+function initTabs() {
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById(btn.dataset.tab).classList.add('active');
+    });
+  });
+}
+
+async function fetchData() {
+  const btn = document.getElementById('btnRefresh');
+  btn.classList.add('loading'); btn.textContent = '⟳ Cargando…';
+  try {
+    rawData = DEMO_MODE ? generateDemoData() : await (await fetch(API_URL)).json();
+    filteredProyectos = [...rawData.proyectos];
+    buildFilters(); renderAll();
+    document.getElementById('lastUpdate').textContent = 'Act: '+new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+  } catch(e) { console.error('Fetch error:',e); }
+  finally { btn.classList.remove('loading'); btn.textContent='↻ Actualizar'; document.getElementById('loadingOverlay').classList.add('hidden'); }
+}
+
+// ─── FILTERS ─────────────────────────────────
+function buildFilters() {
+  const bar = document.getElementById('filtersBar');
+  const defs = [
+    {key:'pm',label:'Project Manager',values:rawData.filtros.pms},
+    {key:'cuenta',label:'Cuenta',values:rawData.filtros.cuentas},
+    {key:'tipo',label:'Tipo',values:rawData.filtros.tipos},
+    {key:'faseActual',label:'Fase',values:rawData.filtros.fases},
+    {key:'supervisor',label:'Supervisor',values:rawData.filtros.supervisores||[]},
+    {key:'entidadFed',label:'Entidad',values:rawData.filtros.entidades||[]},
+  ];
+  bar.innerHTML = '';
+  defs.forEach(f => {
+    if(!f.values?.length) return;
+    const g=document.createElement('div'); g.className='filter-group';
+    const s=document.createElement('select'); s.className='filter-select'; s.dataset.filterKey=f.key;
+    s.innerHTML=`<option value="">${f.label}</option>`+f.values.map(v=>`<option value="${v}">${v}</option>`).join('');
+    s.addEventListener('change',()=>{chartFilter=null;chartFilterSource=null;applyFilters();});
+    g.appendChild(s); bar.appendChild(g);
+  });
+  // Chart filter chip placeholder
+  const cfSpan = document.createElement('span'); cfSpan.id='chartFilterChip'; bar.appendChild(cfSpan);
+  // Reset button
+  const rb=document.createElement('button'); rb.className='filter-reset'; rb.textContent='✕ Limpiar';
+  rb.addEventListener('click',()=>{bar.querySelectorAll('select').forEach(s=>s.value='');chartFilter=null;chartFilterSource=null;applyFilters();}); bar.appendChild(rb);
+  renderChartFilterChip();
+}
+
+function renderChartFilterChip() {
+  const el = document.getElementById('chartFilterChip');
+  if (!el) return;
+  if (!chartFilter) { el.innerHTML = ''; return; }
+  const labels = {faseActual:'Fase',pm:'PM',cuenta:'Cuenta',supervisor:'Supervisor',entidadFed:'Entidad',tipoProv:'Proveeduría',tipo:'Tipo'};
+  el.innerHTML = `<span class="chart-filter-chip" onclick="clearChartFilter()">${labels[chartFilter.key]||chartFilter.key}: ${chartFilter.value} <span class="x">✕</span></span>`;
+}
+
+function clearChartFilter() {
+  chartFilter = null; chartFilterSource = null;
+  applyFilters();
+}
+
+function setChartFilter(key, value, sourceChartId) {
+  // Toggle: if same filter is already active, clear it
+  if (chartFilter && chartFilter.key === key && chartFilter.value === value) {
+    chartFilter = null; chartFilterSource = null;
+  } else {
+    chartFilter = { key, value };
+    chartFilterSource = sourceChartId;
+  }
+  applyFilters();
+}
+
+function applyFilters() {
+  const filters={};
+  document.querySelectorAll('.filter-select').forEach(s=>{if(s.value)filters[s.dataset.filterKey]=s.value;});
+  // Combine dropdown filters + chart filter
+  if (chartFilter) filters[chartFilter.key] = chartFilter.value;
+  filteredProyectos=rawData.proyectos.filter(p=>Object.entries(filters).every(([k,v])=>p[k]===v));
+  renderChartFilterChip();
+  renderAll();
+}
+
+// ─── SPI CALCULATION ─────────────────────────
+// SPI = hitos cumplidos a tiempo / hitos cuya fecha prevista ya pasó (atrasados + cumplidos a tiempo + cumplidos con retraso)
+function calcSPI(conteos) {
+  const vencidos = conteos.aTiempo + conteos.conRetraso + conteos.atrasados;
+  if (vencidos === 0) return null;
+  return +(conteos.aTiempo / vencidos).toFixed(2);
+}
+
+function spiColor(spi) {
+  if (spi === null) return COLORS.c1;
+  if (spi >= 0.9) return COLORS.accent;
+  if (spi >= 0.7) return COLORS.warn;
+  return COLORS.danger;
+}
+
+function spiClass(spi) {
+  if (spi === null) return '';
+  if (spi >= 0.9) return 'spi-good';
+  if (spi >= 0.7) return 'spi-warn';
+  return 'spi-bad';
+}
+
+// ─── RENDER ALL ──────────────────────────────
+function renderAll() {
+  renderKPIs(); renderTable();
+  renderChartHitos(); renderChartFases(); renderChartProv();
+  renderChartPM(); renderChartSupervisor(); renderChartCuenta(); renderChartEntidad();
+  renderChartSpiPM();
+  renderKPIs2(); renderChartDesviacion(); renderChartRendPM(); renderTreemap(); renderChartCuentaRendimiento(); renderPMTable();
+}
+
+// ─── KPIs TAB 1 ──────────────────────────────
+function renderKPIs() {
+  const p = filteredProyectos;
+  const tot = key => p.reduce((s,x)=>s+x.conteos[key],0);
+  const cuentas = new Set(p.map(x=>x.cuenta).filter(Boolean)).size;
+  const potFV = p.reduce((s,x)=>s+(parseFloat(x.potenciaFV)||0),0);
+  const potBESS = p.reduce((s,x)=>s+(parseFloat(x.potenciaSTO)||0),0);
+  const capBESS = p.reduce((s,x)=>s+(parseFloat(x.capacidadSTO)||0),0);
+
+  // Global SPI
+  const globalConteos = { aTiempo:tot('aTiempo'), conRetraso:tot('conRetraso'), atrasados:tot('atrasados') };
+  const globalSPI = calcSPI(globalConteos);
+
+  const cards = [
+    {label:'Proyectos',value:p.length,sub:'portafolio',cls:'c-neutral'},
+    {label:'Cuentas',value:cuentas,sub:'únicas',cls:'c-neutral'},
+    {label:'Potencia FV',value:potFV.toFixed(0)+' kWp',sub:'total fotovoltaica',cls:'c-neutral'},
+    {label:'Potencia BESS',value:potBESS.toFixed(0)+' kW',sub:'almacenamiento',cls:'c-neutral'},
+    {label:'Capacidad BESS',value:capBESS.toFixed(0)+' kWh',sub:'almacenamiento',cls:'c-neutral'},
+    {label:'SPI Portafolio',value:globalSPI!==null?globalSPI.toFixed(2):'—',sub:globalSPI>=0.9?'En control':globalSPI>=0.7?'En riesgo':'Crítico',cls:'c-spi'},
+    {label:'Atrasados',value:tot('atrasados'),sub:'hitos vencidos',cls:'c-danger'},
+    {label:'Con retraso',value:tot('conRetraso'),sub:'fuera de fecha',cls:'c-warn'},
+    {label:'Pendientes',value:tot('pendientes'),sub:'en espera',cls:'c-pending'},
+    {label:'A tiempo',value:tot('aTiempo'),sub:'en fecha',cls:'c-accent'},
+  ];
+  document.getElementById('kpiGrid').innerHTML = cards.map((c,i)=>`
+    <div class="kpi-card ${c.cls} animate-in" style="animation-delay:${i*0.03}s">
+      <div class="kpi-label">${c.label}</div>
+      <div class="kpi-value" style="font-size:${String(c.value).length>7?22:28}px">${c.value}</div>
+      <div class="kpi-sub">${c.sub}</div>
+    </div>`).join('');
+}
+
+// ─── TABLE ───────────────────────────────────
+function renderTable() {
+  document.getElementById('tableCount').textContent=`(${filteredProyectos.length})`;
+  let rows=[...filteredProyectos];
+  if(sortState.col){
+    rows.sort((a,b)=>{
+      let va,vb;
+      if(sortState.col==='spi'){va=calcSPI(a.conteos)??-1;vb=calcSPI(b.conteos)??-1;}
+      else{va=a[sortState.col]??a.conteos?.[sortState.col]??'';vb=b[sortState.col]??b.conteos?.[sortState.col]??'';}
+      const na=parseFloat(va),nb=parseFloat(vb);
+      if(!isNaN(na)&&!isNaN(nb))return sortState.asc?na-nb:nb-na;
+      if(typeof va==='string')va=va.toLowerCase();if(typeof vb==='string')vb=vb.toLowerCase();
+      return sortState.asc?(va<vb?-1:va>vb?1:0):(va>vb?-1:va<vb?1:0);
+    });
+  }
+  document.getElementById('tableBody').innerHTML=rows.map(p=>{
+    const pct=parseFloat(p.pctProyecto)||0;
+    const pctW=Math.min(pct>1?pct:pct*100,100);
+    const pctD=(pct>1?pct:pct*100).toFixed(0);
+    const spi=calcSPI(p.conteos);
+    const spiStr=spi!==null?spi.toFixed(2):'—';
+    return `<tr>
+      <td><span class="proj-id">${esc(p.proj)}</span></td>
+      <td>${esc(p.sitio)}</td><td>${esc(p.cuenta)}</td><td>${esc(p.pm)}</td>
+      <td>${esc(p.tipo)}</td><td>${esc(p.tecnologia)}</td>
+      <td>${p.potenciaFV||'—'}</td><td>${p.potenciaSTO||'—'}</td>
+      <td><div class="progress-cell"><div class="mini-bar"><div class="mini-bar-fill" style="width:${pctW}%"></div></div><span class="progress-pct">${pctD}%</span></div></td>
+      <td>${esc(p.faseActual)}</td>
+      <td><span class="spi-indicator"><span class="spi-dot ${spiClass(spi)}"></span>${spiStr}</span></td>
+      <td><span class="mini-badge badge-danger">${p.conteos.atrasados}</span></td>
+      <td><span class="mini-badge badge-pending">${p.conteos.pendientes}</span></td>
+      <td><span class="mini-badge badge-warn">${p.conteos.conRetraso}</span></td>
+      <td><span class="mini-badge badge-accent">${p.conteos.aTiempo}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+function initTableSort(){
+  document.querySelectorAll('#projectTable th[data-sort]').forEach(th=>{
+    th.addEventListener('click',()=>{
+      const col=th.dataset.sort;
+      if(sortState.col===col)sortState.asc=!sortState.asc;else{sortState.col=col;sortState.asc=true;}
+      document.querySelectorAll('#projectTable th').forEach(h=>h.classList.remove('sorted'));
+      th.classList.add('sorted'); th.querySelector('.sort-arrow').textContent=sortState.asc?'↑':'↓';
+      renderTable();
+    });
+  });
+}
+
+// ─── CHARTS ──────────────────────────────────
+function renderChartHitos(){
+  const data=HITOS_NAMES.map(nombre=>{
+    const s={hito:nombre,atrasado:0,conRetraso:0,pendiente:0,aTiempo:0};
+    filteredProyectos.forEach(p=>{const h=p.hitos?.find(x=>x.nombre===nombre);if(!h?.estatus)return;if(h.estatus==='Atrasado')s.atrasado++;else if(h.estatus==='Cumplido con retraso')s.conRetraso++;else if(h.estatus==='Pendiente')s.pendiente++;else if(h.estatus==='Cumplido a tiempo')s.aTiempo++;});
+    return s;
+  });
+  destroyChart('chartHitos');
+  charts.chartHitos=new Chart(document.getElementById('chartHitos'),{type:'bar',data:{labels:data.map(d=>trunc(d.hito,20)),datasets:[{label:'Atrasado',data:data.map(d=>d.atrasado),backgroundColor:COLORS.danger},{label:'C. retraso',data:data.map(d=>d.conRetraso),backgroundColor:COLORS.warn},{label:'Pendiente',data:data.map(d=>d.pendiente),backgroundColor:COLORS.pending},{label:'A tiempo',data:data.map(d=>d.aTiempo),backgroundColor:COLORS.accent}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:8}}}},scales:{x:{stacked:true,grid:{color:'rgba(41,60,71,0.3)'},ticks:{font:{size:8}}},y:{stacked:true,grid:{display:false},ticks:{font:{size:8}}}}}});
+}
+
+function renderChartFases(){
+  const c=countBy(filteredProyectos,'faseActual'); destroyChart('chartFases');
+  const labels=Object.keys(c);
+  charts.chartFases=new Chart(document.getElementById('chartFases'),{type:'doughnut',data:{labels,datasets:[{data:Object.values(c),backgroundColor:COLORS.palette.slice(0,labels.length),borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:'50%',plugins:{legend:{position:'right',labels:{font:{size:8},padding:5}}},onClick:(evt,els)=>{if(els.length){const idx=els[0].index;setChartFilter('faseActual',labels[idx],'chartFases');}}}});
+}
+
+function renderChartProv(){
+  const c=countBy(filteredProyectos,'tipoProv'); destroyChart('chartProv');
+  const labels=Object.keys(c);
+  charts.chartProv=new Chart(document.getElementById('chartProv'),{type:'doughnut',data:{labels,datasets:[{data:Object.values(c),backgroundColor:[COLORS.accent,COLORS.pending,COLORS.warn,COLORS.teal],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:'50%',plugins:{legend:{position:'bottom',labels:{font:{size:8},padding:5}}},onClick:(evt,els)=>{if(els.length){const idx=els[0].index;setChartFilter('tipoProv',labels[idx],'chartProv');}}}});
+}
+
+function renderChartPM(){
+  const c=countBy(filteredProyectos,'pm');
+  const s=Object.entries(c).sort((a,b)=>b[1]-a[1]); const fullLabels=s.map(x=>x[0]); destroyChart('chartPM');
+  charts.chartPM=new Chart(document.getElementById('chartPM'),{type:'bar',data:{labels:s.map(x=>trunc(x[0],14)),datasets:[{data:s.map(x=>x[1]),backgroundColor:COLORS.accent+'88',borderColor:COLORS.accent,borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,grid:{color:'rgba(41,60,71,0.3)'},ticks:{font:{size:8}}},x:{grid:{display:false},ticks:{font:{size:7},maxRotation:45}}},onClick:(evt,els)=>{if(els.length){const idx=els[0].index;setChartFilter('pm',fullLabels[idx],'chartPM');}}}});
+}
+
+// Supervisor — donut (good for showing relative load distribution)
+function renderChartSupervisor(){
+  const c=countBy(filteredProyectos,'supervisor'); destroyChart('chartSupervisor');
+  const labels=Object.keys(c);
+  charts.chartSupervisor=new Chart(document.getElementById('chartSupervisor'),{type:'doughnut',data:{labels,datasets:[{data:Object.values(c),backgroundColor:COLORS.palette.slice(0,labels.length),borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:'50%',plugins:{legend:{position:'right',labels:{font:{size:8},padding:5}}},onClick:(evt,els)=>{if(els.length){const idx=els[0].index;setChartFilter('supervisor',labels[idx],'chartSupervisor');}}}});
+}
+
+// Cuenta — horizontal bar (many values, better for comparison)
+function renderChartCuenta(){
+  const c=countBy(filteredProyectos,'cuenta');
+  const s=Object.entries(c).sort((a,b)=>b[1]-a[1]).slice(0,10); const fullLabels=s.map(x=>x[0]); destroyChart('chartCuenta');
+  charts.chartCuenta=new Chart(document.getElementById('chartCuenta'),{type:'bar',data:{labels:s.map(x=>trunc(x[0],14)),datasets:[{data:s.map(x=>x[1]),backgroundColor:COLORS.teal+'88',borderColor:COLORS.teal,borderWidth:1}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,grid:{color:'rgba(41,60,71,0.3)'},ticks:{font:{size:8}}},y:{grid:{display:false},ticks:{font:{size:7}}}},onClick:(evt,els)=>{if(els.length){const idx=els[0].index;setChartFilter('cuenta',fullLabels[idx],'chartCuenta');}}}});
+}
+
+function renderChartEntidad(){
+  const c=countBy(filteredProyectos,'entidadFed');
+  const s=Object.entries(c).sort((a,b)=>b[1]-a[1]).slice(0,10); const fullLabels=s.map(x=>x[0]); destroyChart('chartEntidad');
+  charts.chartEntidad=new Chart(document.getElementById('chartEntidad'),{type:'bar',data:{labels:s.map(x=>trunc(x[0],16)),datasets:[{data:s.map(x=>x[1]),backgroundColor:COLORS.pending+'77',borderColor:COLORS.pending,borderWidth:1}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,grid:{color:'rgba(41,60,71,0.3)'},ticks:{font:{size:8}}},y:{grid:{display:false},ticks:{font:{size:8}}}},onClick:(evt,els)=>{if(els.length){const idx=els[0].index;setChartFilter('entidadFed',fullLabels[idx],'chartEntidad');}}}});
+}
+
+// SPI by PM — bar chart with color coding
+function renderChartSpiPM(){
+  const pm={};
+  filteredProyectos.forEach(p=>{
+    if(!p.pm)return;
+    if(!pm[p.pm])pm[p.pm]={at:0,cr:0,atr:0};
+    pm[p.pm].at+=p.conteos.aTiempo; pm[p.pm].cr+=p.conteos.conRetraso; pm[p.pm].atr+=p.conteos.atrasados;
+  });
+  const entries=Object.entries(pm).map(([name,s])=>{
+    const spi=calcSPI({aTiempo:s.at,conRetraso:s.cr,atrasados:s.atr});
+    return {name,spi:spi??0};
+  }).sort((a,b)=>b.spi-a.spi);
+  const fullLabels=entries.map(e=>e.name);
+  destroyChart('chartSpiPM');
+  charts.chartSpiPM=new Chart(document.getElementById('chartSpiPM'),{type:'bar',
+    data:{labels:entries.map(e=>trunc(e.name,14)),datasets:[{data:entries.map(e=>e.spi),backgroundColor:entries.map(e=>spiColor(e.spi)+'99'),borderColor:entries.map(e=>spiColor(e.spi)),borderWidth:1}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>'SPI: '+ctx.raw.toFixed(2)}}},
+      scales:{y:{min:0,max:1.2,grid:{color:'rgba(41,60,71,0.3)'},ticks:{font:{size:8}}},x:{grid:{display:false},ticks:{font:{size:7},maxRotation:45}}},
+      onClick:(evt,els)=>{if(els.length){const idx=els[0].index;setChartFilter('pm',fullLabels[idx],'chartSpiPM');}}
+    }
+  });
+}
+
+// ─── TAB 2 ───────────────────────────────────
+function renderKPIs2(){
+  const p=filteredProyectos;
+  const totalH=p.reduce((s,x)=>s+x.conteos.total,0);
+  const totalAT=p.reduce((s,x)=>s+x.conteos.aTiempo,0);
+  const pctAT=totalH?((totalAT/totalH)*100).toFixed(1):'0';
+  const avgD=rawData.promedioDesviacion?.length?(rawData.promedioDesviacion.reduce((s,d)=>s+d.promedioDias,0)/rawData.promedioDesviacion.length).toFixed(1):'—';
+  const crit=rawData.proyectoCritico;
+  const cards=[
+    {label:'% Hitos a tiempo',value:pctAT+'%',sub:`${totalAT} de ${totalH}`,cls:'c-accent'},
+    {label:'Desv. promedio',value:avgD+' d',sub:'días promedio',cls:'c-warn'},
+    {label:'Proyecto crítico',value:crit?crit.proj:'—',sub:crit?`${crit.conteos.atrasados} atr · ${trunc(crit.sitio,18)}`:'',cls:'c-danger'},
+    {label:'Hitos evaluados',value:totalH,sub:'portafolio total',cls:'c-neutral'},
+  ];
+  document.getElementById('kpiGrid2').innerHTML=cards.map((c,i)=>`
+    <div class="kpi-card ${c.cls} animate-in" style="animation-delay:${i*0.03}s">
+      <div class="kpi-label">${c.label}</div>
+      <div class="kpi-value" style="font-size:${String(c.value).length>8?20:28}px">${c.value}</div>
+      <div class="kpi-sub">${c.sub}</div>
+    </div>`).join('');
+}
+
+function renderChartDesviacion(){
+  const data=[...(rawData.promedioDesviacion||[])].sort((a,b)=>b.promedioDias-a.promedioDias); destroyChart('chartDesviacion');
+  charts.chartDesviacion=new Chart(document.getElementById('chartDesviacion'),{type:'bar',data:{labels:data.map(d=>trunc(d.hito,20)),datasets:[{data:data.map(d=>d.promedioDias),backgroundColor:data.map(d=>d.promedioDias>30?COLORS.danger+'cc':d.promedioDias>15?COLORS.warn+'cc':COLORS.accent+'88'),borderWidth:0}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,grid:{color:'rgba(41,60,71,0.3)'},title:{display:true,text:'Días',color:'#5a5858',font:{size:9}},ticks:{font:{size:8}}},y:{grid:{display:false},ticks:{font:{size:8}}}}}});
+}
+
+function renderChartRendPM(){
+  const pm={};
+  filteredProyectos.forEach(p=>{if(!p.pm)return;if(!pm[p.pm])pm[p.pm]={n:0,at:0,tot:0};pm[p.pm].n++;pm[p.pm].at+=p.conteos.aTiempo;pm[p.pm].tot+=p.conteos.total;});
+  const pts=Object.entries(pm).map(([name,s])=>({x:s.tot?+((s.at/s.tot)*100).toFixed(1):0,y:s.n,name}));
+  destroyChart('chartRendPM');
+  charts.chartRendPM=new Chart(document.getElementById('chartRendPM'),{type:'bubble',data:{datasets:[{data:pts.map(p=>({x:p.x,y:p.y,r:Math.max(5,p.y*2)})),backgroundColor:COLORS.accent+'55',borderColor:COLORS.accent,borderWidth:1.5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>{const p=pts[ctx.dataIndex];return `${p.name}: ${p.x}% · ${p.y} proy`;}}}},scales:{x:{title:{display:true,text:'% a tiempo',color:'#5a5858',font:{size:9}},min:0,max:100,grid:{color:'rgba(41,60,71,0.3)'},ticks:{font:{size:8}}},y:{title:{display:true,text:'Proyectos',color:'#5a5858',font:{size:9}},beginAtZero:true,grid:{color:'rgba(41,60,71,0.3)'},ticks:{font:{size:8}}}}}});
+}
+
+function renderTreemap(){
+  const c=countBy(filteredProyectos,'faseActual');
+  const total=Object.values(c).reduce((s,v)=>s+v,0);
+  const sorted=Object.entries(c).sort((a,b)=>b[1]-a[1]);
+  const ct=document.getElementById('treemapContainer');
+  if(!total){ct.innerHTML='<div style="text-align:center;padding:40px;color:var(--text3);">Sin datos</div>';return;}
+  ct.innerHTML=`<div style="display:flex;flex-wrap:wrap;gap:2px;height:200px;">${sorted.map(([f,n],i)=>{
+    const pct=n/total*100;const col=COLORS.palette[i%COLORS.palette.length];
+    return `<div style="flex:${pct} 1 0;min-width:50px;background:${col}1a;border:1px solid ${col}33;padding:8px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;border-radius:2px;transition:background .2s;cursor:default;" onmouseenter="this.style.background='${col}2a'" onmouseleave="this.style.background='${col}1a'"><div style="font-family:var(--font-display);font-weight:800;font-size:18px;color:${col}">${n}</div><div style="font-size:8px;color:var(--text2);letter-spacing:1px;text-transform:uppercase;margin-top:2px;">${trunc(f,16)}</div><div style="font-size:8px;color:var(--text3)">${pct.toFixed(0)}%</div></div>`;
+  }).join('')}</div>`;
+}
+
+function renderChartCuentaRendimiento(){
+  const cs={};
+  filteredProyectos.forEach(p=>{if(!p.cuenta)return;if(!cs[p.cuenta])cs[p.cuenta]={at:0,tot:0};cs[p.cuenta].at+=p.conteos.aTiempo;cs[p.cuenta].tot+=p.conteos.total;});
+  const e=Object.entries(cs).map(([c,s])=>({cuenta:c,pct:s.tot?+((s.at/s.tot)*100).toFixed(1):0})).sort((a,b)=>b.pct-a.pct).slice(0,12);
+  destroyChart('chartCuentaRendimiento');
+  charts.chartCuentaRendimiento=new Chart(document.getElementById('chartCuentaRendimiento'),{type:'bar',data:{labels:e.map(x=>trunc(x.cuenta,16)),datasets:[{data:e.map(x=>x.pct),backgroundColor:e.map(x=>x.pct>=70?COLORS.accent+'88':x.pct>=40?COLORS.warn+'88':COLORS.danger+'88'),borderWidth:0}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{min:0,max:100,grid:{color:'rgba(41,60,71,0.3)'},title:{display:true,text:'%',color:'#5a5858',font:{size:9}},ticks:{font:{size:8}}},y:{grid:{display:false},ticks:{font:{size:8}}}}}});
+}
+
+function renderPMTable(){
+  const pm={};
+  filteredProyectos.forEach(p=>{if(!p.pm)return;if(!pm[p.pm])pm[p.pm]={n:0,at:0,cr:0,atr:0,pend:0,tot:0};pm[p.pm].n++;pm[p.pm].at+=p.conteos.aTiempo;pm[p.pm].cr+=p.conteos.conRetraso;pm[p.pm].atr+=p.conteos.atrasados;pm[p.pm].pend+=p.conteos.pendientes;pm[p.pm].tot+=p.conteos.total;});
+  document.getElementById('pmTableBody').innerHTML=Object.entries(pm).sort((a,b)=>b[1].n-a[1].n).map(([name,s])=>{
+    const pct=s.tot?((s.at/s.tot)*100).toFixed(1):'0';
+    const spi=calcSPI({aTiempo:s.at,conRetraso:s.cr,atrasados:s.atr});
+    const spiStr=spi!==null?spi.toFixed(2):'—';
+    return `<tr>
+      <td style="font-weight:500;color:var(--accent)">${esc(name)}</td>
+      <td>${s.n}</td><td>${s.tot}</td>
+      <td><span class="mini-badge badge-accent">${s.at}</span></td>
+      <td><span class="mini-badge badge-warn">${s.cr}</span></td>
+      <td><span class="mini-badge badge-danger">${s.atr}</span></td>
+      <td><span class="mini-badge badge-pending">${s.pend}</span></td>
+      <td><div class="progress-cell"><div class="mini-bar"><div class="mini-bar-fill" style="width:${pct}%"></div></div><span class="progress-pct">${pct}%</span></div></td>
+      <td><span class="spi-indicator"><span class="spi-dot ${spiClass(spi)}"></span>${spiStr}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+// ─── HELPERS ─────────────────────────────────
+function destroyChart(id){if(charts[id]){charts[id].destroy();charts[id]=null;}}
+function countBy(arr,key){const o={};arr.forEach(i=>{const v=i[key]||'(vacío)';o[v]=(o[v]||0)+1;});return o;}
+function trunc(s,n){return s?.length>n?s.slice(0,n)+'…':s||'';}
+function esc(s){if(!s)return'';const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+
+// ─── DEMO DATA ───────────────────────────────
+function generateDemoData(){
+  const PMs=['Jorge Castellanos','Ricardo García','Valeria Tapia','Alberto Pérez','Karen Cruz','Julio Martínez'];
+  const KAMs=['Laura Mendoza','Fernando Ruiz','Andrea López'];
+  const Cuentas=['FAURECIA','LIVERPOOL','GRUPO DIESTRA','CEMEX','BIMBO','FEMSA','OXXO','ALPEK','TERNIUM','HEINEKEN','DANONE','NESTLÉ','MAGNA','CONTINENTAL','MARTINREA','FLEX'];
+  const Tipos=['PPA','CAPEX SFV','CAPEX STO','EPC'];
+  const Tecno=['FV','FV+SAE','SAE'];
+  const Fases=['Sin Fechas','Fase Liberación','Fase Instalación','Fase Licitación','Fase Propuesta','Commissioning','Cerrado','Pase a Servicios'];
+  const Entidades=['Nuevo León','CDMX','Jalisco','Querétaro','San Luis Potosí','Estado de México','Puebla','Guanajuato','Coahuila','Quintana Roo'];
+  const Supervisores=['Carlos Olvera','Miguel Ángel Torres','Sofía Reyes','Daniel Guzmán'];
+  const ProvTypes=['EPC Enlight','EPC Mixto','EPC externo'];
+  const statuses=['Cumplido a tiempo','Cumplido con retraso','Atrasado','Pendiente'];
+  const pick=a=>a[Math.floor(Math.random()*a.length)];
+  const ri=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+
+  const proyectos=[];
+  for(let i=1;i<=86;i++){
+    const fase=pick(Fases),closed=fase==='Cerrado',noF=fase==='Sin Fechas';
+    const tec=pick(Tecno);
+    const hitos=HITOS_NAMES.map(nombre=>{
+      let estatus=null;
+      if(!noF){estatus=closed?(Math.random()<.8?'Cumplido a tiempo':'Cumplido con retraso'):pick(statuses);}
+      return{nombre,estatus};
+    });
+    const hCE=hitos.filter(h=>h.estatus!==null);
+    const conteos={atrasados:hitos.filter(h=>h.estatus==='Atrasado').length,pendientes:hitos.filter(h=>h.estatus==='Pendiente').length,conRetraso:hitos.filter(h=>h.estatus==='Cumplido con retraso').length,aTiempo:hitos.filter(h=>h.estatus==='Cumplido a tiempo').length,total:hCE.length};
+    const hasBESS=tec==='SAE'||tec==='FV+SAE';
+    proyectos.push({
+      proj:`PROJ-${100+i}`,sitio:`${pick(['CDMX','MTY','GDL','QRO','SLP','PUE','CANCUN','LEON','SALTILLO','MERIDA'])}-${ri(1,50)}`,
+      cuenta:pick(Cuentas),pm:pick(PMs),tipo:pick(Tipos),tecnologia:tec,
+      kam:pick(KAMs),supervisor:pick(Supervisores),
+      potenciaFV:tec!=='SAE'?String(ri(50,800)):'',
+      potenciaSTO:hasBESS?String(ri(20,300)):'',
+      capacidadSTO:hasBESS?String(ri(40,600)):'',
+      faseActual:fase,pctObra:(Math.random()*.95).toFixed(2),
+      pctProyecto:(closed?1:noF?0:Math.random()*.95).toFixed(4),
+      entidadFed:pick(Entidades),tipoProv:pick(ProvTypes),hitos,conteos
+    });
+  }
+  const filtros={pms:[...new Set(proyectos.map(p=>p.pm))].sort(),cuentas:[...new Set(proyectos.map(p=>p.cuenta))].sort(),tipos:[...new Set(proyectos.map(p=>p.tipo))].sort(),fases:[...new Set(proyectos.map(p=>p.faseActual))].sort(),supervisores:[...new Set(proyectos.map(p=>p.supervisor))].sort(),entidades:[...new Set(proyectos.map(p=>p.entidadFed))].sort()};
+  const promedioDesviacion=HITOS_NAMES.map(h=>({hito:h,promedioDias:+(Math.random()*45-5).toFixed(1)})).sort((a,b)=>b.promedioDias-a.promedioDias);
+  const proyectoCritico=[...proyectos].sort((a,b)=>b.conteos.atrasados-a.conteos.atrasados)[0];
+  return{ok:true,generadoEn:new Date().toISOString(),kpis:{totalProyectos:proyectos.length,totalCuentas:filtros.cuentas.length},filtros,proyectos,porHito:[],proyectoCritico,promedioDesviacion};
+}
+</script>
+</body>
+</html>
