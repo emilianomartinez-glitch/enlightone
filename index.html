@@ -340,8 +340,8 @@ footer { padding:10px 28px; border-top:1px solid var(--border); display:flex; ju
               <th data-sort="pm">PM <span class="sort-arrow"></span></th>
               <th data-sort="tipo">Tipo <span class="sort-arrow"></span></th>
               <th data-sort="tecnologia">Tecno <span class="sort-arrow"></span></th>
-              <th data-sort="potenciaFV">kWp FV <span class="sort-arrow"></span></th>
-              <th data-sort="potenciaSTO">kW BESS <span class="sort-arrow"></span></th>
+              <th data-sort="potenciaFV">kWp SFV <span class="sort-arrow"></span></th>
+              <th data-sort="potenciaSTO">kW SAE <span class="sort-arrow"></span></th>
               <th data-sort="pctProyecto">% Proy <span class="sort-arrow"></span></th>
               <th data-sort="faseActual">Fase <span class="sort-arrow"></span></th>
               <th data-sort="spi">SPI <span class="sort-arrow"></span></th>
@@ -665,7 +665,7 @@ function renderExecSummary() {
       <div class="exec-card-title"><span class="dot" style="background:var(--pending)"></span>Portafolio</div>
       <div class="exec-body">
         <strong>${p.length}</strong> proyectos · <strong>${new Set(p.map(x=>x.cuenta).filter(Boolean)).size}</strong> cuentas<br>
-        ${fmtNum(p.reduce((s,x)=>s+(parseFloat(x.potenciaFV)||0),0))} kWp FV · ${fmtNum(p.reduce((s,x)=>s+(parseFloat(x.potenciaSTO)||0),0))} kW BESS<br>
+        ${fmtNum(p.reduce((s,x)=>s+(parseFloat(x.potenciaFV)||0),0))} kWp SFV · ${fmtNum(p.reduce((s,x)=>s+(parseFloat(x.potenciaSTO)||0),0))} kW SAE<br>
         <span class="muted">Actualizado: ${new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'})}</span>
       </div>
     </div>
@@ -688,9 +688,9 @@ function renderKPIs() {
   const cards = [
     {label:'Proyectos',value:p.length,sub:'portafolio',cls:'c-neutral',fk:null},
     {label:'Cuentas',value:cuentas,sub:'únicas',cls:'c-neutral',fk:null},
-    {label:'Potencia FV',value:fmtNum(potFV)+' kWp',sub:'total fotovoltaica',cls:'c-neutral',fk:null},
-    {label:'Potencia BESS',value:fmtNum(potBESS)+' kW',sub:'almacenamiento',cls:'c-neutral',fk:null},
-    {label:'Capacidad BESS',value:fmtNum(capBESS)+' kWh',sub:'almacenamiento',cls:'c-neutral',fk:null},
+    {label:'Potencia SFV',value:fmtNum(potFV)+' kWp',sub:'total fotovoltaica',cls:'c-neutral',fk:null},
+    {label:'Potencia SAE',value:fmtNum(potBESS)+' kW',sub:'almacenamiento',cls:'c-neutral',fk:null},
+    {label:'Capacidad SAE',value:fmtNum(capBESS)+' kWh',sub:'almacenamiento',cls:'c-neutral',fk:null},
     {label:'SPI Portafolio',value:globalSPI!==null?globalSPI.toFixed(2):'—',sub:globalSPI>=0.9?'En control':globalSPI>=0.7?'En riesgo':'Crítico',cls:'c-spi',fk:null},
     {label:'Atrasados',value:tot('atrasados'),sub:'hitos vencidos',cls:'c-danger',fk:'atrasados'},
     {label:'Con retraso',value:tot('conRetraso'),sub:'fuera de fecha',cls:'c-warn',fk:'conRetraso'},
@@ -801,8 +801,8 @@ function renderDetailRow(p) {
             <strong>Supervisor:</strong> ${esc(p.supervisor)}<br>
             <strong>Tipo:</strong> ${esc(p.tipo)} · ${esc(p.tecnologia)}<br>
             <strong>Fase:</strong> ${esc(p.faseActual)}<br>
-            <strong>Potencia FV:</strong> ${p.potenciaFV||'—'} kWp<br>
-            <strong>BESS:</strong> ${p.potenciaSTO||'—'} kW / ${p.capacidadSTO||'—'} kWh<br>
+            <strong>Potencia SFV:</strong> ${p.potenciaFV||'—'} kWp<br>
+            <strong>SAE:</strong> ${p.potenciaSTO||'—'} kW / ${p.capacidadSTO||'—'} kWh<br>
             <strong>SPI:</strong> <span style="color:${spiC};font-weight:700;">${spiStr}</span><br>
             <strong>Hitos:</strong> ${p.conteos.aTiempo} a tiempo · ${p.conteos.conRetraso} retraso · ${p.conteos.atrasados} atrasados · ${p.conteos.pendientes} pendientes
           </div>
