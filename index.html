@@ -370,8 +370,8 @@ footer { padding:10px 28px; border-top:1px solid var(--border); display:flex; ju
           <div class="chart-wrapper" style="height:260px"><canvas id="chartDesviacion"></canvas></div>
         </div>
         <div class="chart-card">
-          <div class="chart-title">Rendimiento por PM</div>
-          <div class="chart-desc">% hitos a tiempo vs carga de proyectos</div>
+          <div class="chart-title">Rendimiento por cuenta</div>
+          <div class="chart-desc">% hitos a tiempo vs cantidad de proyectos por cuenta</div>
           <div class="chart-wrapper" style="height:260px"><canvas id="chartRendPM"></canvas></div>
         </div>
       </div>
@@ -924,11 +924,11 @@ function renderChartDesviacion(){
 }
 
 function renderChartRendPM(){
-  const pm={};
-  filteredProyectos.forEach(p=>{if(!p.pm)return;if(!pm[p.pm])pm[p.pm]={n:0,at:0,tot:0};pm[p.pm].n++;pm[p.pm].at+=p.conteos.aTiempo;pm[p.pm].tot+=p.conteos.total;});
-  const pts=Object.entries(pm).map(([name,s])=>({x:s.tot?+((s.at/s.tot)*100).toFixed(1):0,y:s.n,name}));
+  const cta={};
+  filteredProyectos.forEach(p=>{if(!p.cuenta)return;if(!cta[p.cuenta])cta[p.cuenta]={n:0,at:0,tot:0};cta[p.cuenta].n++;cta[p.cuenta].at+=p.conteos.aTiempo;cta[p.cuenta].tot+=p.conteos.total;});
+  const pts=Object.entries(cta).map(([name,s])=>({x:s.tot?+((s.at/s.tot)*100).toFixed(1):0,y:s.n,name}));
   destroyChart('chartRendPM');
-  charts.chartRendPM=new Chart(document.getElementById('chartRendPM'),{type:'bubble',data:{datasets:[{data:pts.map(p=>({x:p.x,y:p.y,r:Math.max(5,p.y*2)})),backgroundColor:COLORS.accent+'55',borderColor:COLORS.accent,borderWidth:1.5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>{const p=pts[ctx.dataIndex];return `${p.name}: ${p.x}% · ${p.y} proy`;}}}},scales:{x:{title:{display:true,text:'% a tiempo',color:'#5a5858',font:{size:9}},min:0,max:100,grid:{color:'rgba(41,60,71,0.3)'},ticks:{font:{size:8}}},y:{title:{display:true,text:'Proyectos',color:'#5a5858',font:{size:9}},beginAtZero:true,grid:{color:'rgba(41,60,71,0.3)'},ticks:{font:{size:8}}}}}});
+  charts.chartRendPM=new Chart(document.getElementById('chartRendPM'),{type:'bubble',data:{datasets:[{data:pts.map(p=>({x:p.x,y:p.y,r:Math.max(5,p.y*1.8)})),backgroundColor:COLORS.teal+'55',borderColor:COLORS.teal,borderWidth:1.5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>{const p=pts[ctx.dataIndex];return `${p.name}: ${p.x}% a tiempo · ${p.y} proyectos`;}}}},scales:{x:{title:{display:true,text:'% hitos a tiempo',color:'#5a5858',font:{size:9}},min:0,max:100,grid:{color:'rgba(41,60,71,0.3)'},ticks:{font:{size:8}}},y:{title:{display:true,text:'Proyectos',color:'#5a5858',font:{size:9}},beginAtZero:true,grid:{color:'rgba(41,60,71,0.3)'},ticks:{font:{size:8}}}}}});
 }
 
 function renderTreemap(){
