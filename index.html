@@ -531,7 +531,7 @@ function buildFilters() {
         // Searchable input with datalist
         const wrap=document.createElement('div'); wrap.className='filter-search-wrap';
         const inp=document.createElement('input'); inp.className='filter-search'; inp.type='text';
-        inp.placeholder='🔍 '+f.label; inp.dataset.filterKey=f.key;
+        inp.placeholder=f.label; inp.dataset.filterKey=f.key;
         inp.setAttribute('list','dl_'+barId+'_'+f.key); inp.autocomplete='off';
         const dl=document.createElement('datalist'); dl.id='dl_'+barId+'_'+f.key;
         dl.innerHTML=f.values.map(v=>`<option value="${v}">`).join('');
