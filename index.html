@@ -64,6 +64,22 @@ header { padding:16px 28px 0; background:linear-gradient(180deg,rgba(0,170,133,0
 .filter-reset { font-family:var(--font-body); font-size:9px; letter-spacing:1px; text-transform:uppercase; color:var(--text3); background:transparent; border:1px dashed var(--border); padding:5px 12px; cursor:pointer; transition:all .2s; border-radius:2px; }
 .filter-reset:hover { border-color:var(--danger); color:var(--danger); }
 
+/* ── ALERT BANNER ───────────────── */
+.alert-banner { margin:0 28px; padding:0; overflow:hidden; }
+.alert-card { background:linear-gradient(135deg,rgba(255,159,67,0.06),rgba(255,159,67,0.02)); border:1px solid rgba(255,159,67,0.15); border-radius:2px; padding:10px 16px; margin-bottom:8px; }
+.alert-title { font-family:var(--font-display); font-weight:700; font-size:10px; letter-spacing:1px; text-transform:uppercase; margin-bottom:4px; display:flex; align-items:center; gap:6px; }
+.alert-title .dot { width:6px; height:6px; border-radius:50%; }
+.alert-body { font-size:11px; color:var(--text); line-height:1.6; }
+.alert-body strong { font-weight:600; }
+.alert-body .hl-warn { color:var(--warn); font-weight:600; }
+.alert-body .hl-muted { color:var(--text2); }
+
+/* ── SEARCHABLE FILTER ─────────── */
+.filter-search-wrap { position:relative; }
+.filter-search { font-family:var(--font-body); font-size:10px; color:var(--text2); background:var(--surface); border:1px solid var(--border); padding:5px 10px; min-width:160px; transition:border-color .2s; border-radius:2px; }
+.filter-search:hover,.filter-search:focus { border-color:var(--accent); color:var(--text); outline:none; }
+.filter-search::placeholder { color:var(--text3); }
+
 .chart-filter-chip {
   display:inline-flex; align-items:center; gap:5px;
   font-family:var(--font-body); font-size:9px; letter-spacing:1px;
@@ -260,6 +276,9 @@ footer { padding:10px 28px; border-top:1px solid var(--border); display:flex; ju
   <!-- EXECUTIVE SUMMARY — always visible -->
   <div class="exec-summary" id="execSummary"></div>
 
+  <!-- ALERT BANNER — calidad de datos -->
+  <div class="alert-banner" id="alertBanner"></div>
+
   <div class="main">
 
     <!-- ═══════════ TAB 1: ESTADO GENERAL ═══════════ -->
@@ -269,7 +288,7 @@ footer { padding:10px 28px; border-top:1px solid var(--border); display:flex; ju
       <div class="section-label">Resumen general</div>
       <div class="kpi-grid" id="kpiGrid"></div>
 
-      <!-- Row 1: Hitos + Fases + Proveeduría -->
+      <!-- Row 1: Hitos + Fases + Tipo -->
       <div class="section-label">Distribución del portafolio</div>
       <div class="charts-row-4">
         <div class="chart-card span2">
@@ -283,13 +302,13 @@ footer { padding:10px 28px; border-top:1px solid var(--border); display:flex; ju
           <div class="chart-wrapper" style="height:220px"><canvas id="chartFases"></canvas></div>
         </div>
         <div class="chart-card">
-          <div class="chart-title">Por proveeduría</div>
-          <div class="chart-desc">Tipo de EPC</div>
-          <div class="chart-wrapper" style="height:220px"><canvas id="chartProv"></canvas></div>
+          <div class="chart-title">Por tipo</div>
+          <div class="chart-desc">PPA / CAPEX / EPC</div>
+          <div class="chart-wrapper" style="height:220px"><canvas id="chartTipo"></canvas></div>
         </div>
       </div>
 
-      <!-- Row 2: PM + Entidad + Supervisor + Cuenta -->
+      <!-- Row 2: PM + Proveeduría + Cuenta -->
       <div class="charts-row-3">
         <div class="chart-card">
           <div class="chart-title">Por Project Manager</div>
@@ -297,9 +316,9 @@ footer { padding:10px 28px; border-top:1px solid var(--border); display:flex; ju
           <div class="chart-wrapper" style="height:170px"><canvas id="chartPM"></canvas></div>
         </div>
         <div class="chart-card">
-          <div class="chart-title">Por supervisor</div>
-          <div class="chart-desc">Distribución de carga</div>
-          <div class="chart-wrapper" style="height:170px"><canvas id="chartSupervisor"></canvas></div>
+          <div class="chart-title">Por proveeduría</div>
+          <div class="chart-desc">Tipo de EPC</div>
+          <div class="chart-wrapper" style="height:170px"><canvas id="chartProv"></canvas></div>
         </div>
         <div class="chart-card">
           <div class="chart-title">Por cuenta</div>
@@ -308,7 +327,7 @@ footer { padding:10px 28px; border-top:1px solid var(--border); display:flex; ju
         </div>
       </div>
 
-      <!-- Row 3: Entidad + SPI por PM -->
+      <!-- Row 3: Entidad + Rendimiento por Subcontratista -->
       <div class="charts-row">
         <div class="chart-card">
           <div class="chart-title">Por entidad federativa</div>
@@ -316,9 +335,9 @@ footer { padding:10px 28px; border-top:1px solid var(--border); display:flex; ju
           <div class="chart-wrapper" style="height:170px"><canvas id="chartEntidad"></canvas></div>
         </div>
         <div class="chart-card">
-          <div class="chart-title">SPI por Project Manager</div>
-          <div class="chart-desc">Schedule Performance Index — hitos cumplidos a tiempo / hitos vencidos</div>
-          <div class="chart-wrapper" style="height:170px"><canvas id="chartSpiPM"></canvas></div>
+          <div class="chart-title">Rendimiento por subcontratista</div>
+          <div class="chart-desc">% hitos a tiempo vs total hitos evaluados</div>
+          <div class="chart-wrapper" style="height:170px"><canvas id="chartSubcontratista"></canvas></div>
         </div>
       </div>
 
@@ -493,11 +512,12 @@ async function fetchData() {
 function buildFilters() {
   const defs = [
     {key:'proj',label:'PROJ',values:rawData.filtros.projs||[]},
-    {key:'sitio',label:'Sitio',values:rawData.filtros.sitios||[]},
+    {key:'sitio',label:'Sitio',values:rawData.filtros.sitios||[],searchable:true},
     {key:'pm',label:'Project Manager',values:rawData.filtros.pms},
     {key:'cuenta',label:'Cuenta',values:rawData.filtros.cuentas},
     {key:'tipo',label:'Tipo',values:rawData.filtros.tipos},
     {key:'faseActual',label:'Fase',values:rawData.filtros.fases},
+    {key:'tipoProv',label:'Proveeduría',values:rawData.filtros.proveedurias||[]},
     {key:'supervisor',label:'Supervisor',values:rawData.filtros.supervisores||[]},
     {key:'entidadFed',label:'Entidad',values:rawData.filtros.entidades||[]},
   ];
@@ -507,15 +527,35 @@ function buildFilters() {
     bar.innerHTML = '';
     defs.forEach(f => {
       if(!f.values?.length) return;
-      const g=document.createElement('div'); g.className='filter-group';
-      const s=document.createElement('select'); s.className='filter-select'; s.dataset.filterKey=f.key;
-      s.innerHTML=`<option value="">${f.label}</option>`+f.values.map(v=>`<option value="${v}">${v}</option>`).join('');
-      s.addEventListener('change',()=>{syncFilters(barId,f.key,s.value);chartFilter=null;chartFilterSource=null;kpiFilter=null;applyFilters();});
-      g.appendChild(s); bar.appendChild(g);
+      if (f.searchable) {
+        // Searchable input with datalist
+        const wrap=document.createElement('div'); wrap.className='filter-search-wrap';
+        const inp=document.createElement('input'); inp.className='filter-search'; inp.type='text';
+        inp.placeholder='🔍 '+f.label; inp.dataset.filterKey=f.key;
+        inp.setAttribute('list','dl_'+barId+'_'+f.key); inp.autocomplete='off';
+        const dl=document.createElement('datalist'); dl.id='dl_'+barId+'_'+f.key;
+        dl.innerHTML=f.values.map(v=>`<option value="${v}">`).join('');
+        inp.addEventListener('input',()=>{
+          const val=inp.value;
+          const match=f.values.find(v=>v===val);
+          if(match||val===''){syncFilters(barId,f.key,val);chartFilter=null;chartFilterSource=null;kpiFilter=null;applyFilters();}
+        });
+        inp.addEventListener('change',()=>{
+          const val=inp.value;
+          if(!f.values.includes(val)&&val!==''){inp.value='';syncFilters(barId,f.key,'');chartFilter=null;chartFilterSource=null;kpiFilter=null;applyFilters();}
+        });
+        wrap.appendChild(inp); wrap.appendChild(dl); bar.appendChild(wrap);
+      } else {
+        const g=document.createElement('div'); g.className='filter-group';
+        const s=document.createElement('select'); s.className='filter-select'; s.dataset.filterKey=f.key;
+        s.innerHTML=`<option value="">${f.label}</option>`+f.values.map(v=>`<option value="${v}">${v}</option>`).join('');
+        s.addEventListener('change',()=>{syncFilters(barId,f.key,s.value);chartFilter=null;chartFilterSource=null;kpiFilter=null;applyFilters();});
+        g.appendChild(s); bar.appendChild(g);
+      }
     });
     if (barId==='filtersBar') { const cfSpan=document.createElement('span'); cfSpan.id='chartFilterChip'; bar.appendChild(cfSpan); }
     const rb=document.createElement('button'); rb.className='filter-reset'; rb.textContent='✕ Limpiar';
-    rb.addEventListener('click',()=>{document.querySelectorAll('.filter-select').forEach(s=>s.value='');chartFilter=null;chartFilterSource=null;kpiFilter=null;applyFilters();});
+    rb.addEventListener('click',()=>{document.querySelectorAll('.filter-select').forEach(s=>s.value='');document.querySelectorAll('.filter-search').forEach(s=>s.value='');chartFilter=null;chartFilterSource=null;kpiFilter=null;applyFilters();});
     bar.appendChild(rb);
   });
   renderChartFilterChip();
@@ -526,6 +566,9 @@ function syncFilters(sourceBarId, key, value) {
   const targetBar = document.getElementById(targetBarId);
   if (!targetBar) return;
   targetBar.querySelectorAll('.filter-select').forEach(s => {
+    if (s.dataset.filterKey===key) s.value=value;
+  });
+  targetBar.querySelectorAll('.filter-search').forEach(s => {
     if (s.dataset.filterKey===key) s.value=value;
   });
 }
@@ -566,6 +609,7 @@ function applyFilters() {
   // Deduplicate: both bars have same keys, just take unique values
   const seen={};
   document.querySelectorAll('.filter-select').forEach(s=>{if(s.value && !seen[s.dataset.filterKey]){filters[s.dataset.filterKey]=s.value;seen[s.dataset.filterKey]=true;}});
+  document.querySelectorAll('.filter-search').forEach(s=>{if(s.value && !seen[s.dataset.filterKey]){filters[s.dataset.filterKey]=s.value;seen[s.dataset.filterKey]=true;}});
   // Combine dropdown filters + chart filter
   if (chartFilter) filters[chartFilter.key] = chartFilter.value;
   filteredProyectos=rawData.proyectos.filter(p=>Object.entries(filters).every(([k,v])=>p[k]===v));
@@ -608,11 +652,31 @@ function spiClass(spi) {
 
 // ─── RENDER ALL ──────────────────────────────
 function renderAll() {
-  renderExecSummary(); renderKPIs(); renderTable();
-  renderChartHitos(); renderChartFases(); renderChartProv();
-  renderChartPM(); renderChartSupervisor(); renderChartCuenta(); renderChartEntidad();
-  renderChartSpiPM();
+  renderAlertBanner(); renderExecSummary(); renderKPIs(); renderTable();
+  renderChartHitos(); renderChartFases(); renderChartTipo(); renderChartProv();
+  renderChartPM(); renderChartCuenta(); renderChartEntidad();
+  renderChartSubcontratista();
   renderKPIs2(); renderChartDesviacion(); renderChartRendPM(); renderTreemap(); renderChartCuentaRendimiento(); renderPMTable();
+}
+
+// ─── ALERT BANNER — Calidad de datos ─────────
+function renderAlertBanner() {
+  const p = filteredProyectos;
+  const el = document.getElementById('alertBanner');
+  if (!p.length) { el.innerHTML = ''; return; }
+
+  const sinFechas = p.filter(x => x.conteos.total === 0).length;
+  const sinPotencia = p.filter(x => !x.potenciaFV && !x.potenciaSTO && !x.capacidadSTO).length;
+
+  let parts = [];
+  if (sinFechas > 0) parts.push(`<span class="hl-warn">${sinFechas}</span> sin fechas registradas`);
+  if (sinPotencia > 0) parts.push(`<span class="hl-warn">${sinPotencia}</span> sin potencia/capacidad`);
+
+  if (parts.length > 0) {
+    el.innerHTML = `<div class="alert-card"><div class="alert-title" style="color:var(--warn)"><span class="dot" style="background:var(--warn)"></span>Calidad de datos</div><div class="alert-body">${parts.join(' · ')} — <span class="hl-muted">estos proyectos pueden no participar en métricas de rendimiento</span></div></div>`;
+  } else {
+    el.innerHTML = '';
+  }
 }
 
 // ─── EXECUTIVE SUMMARY ───────────────────────
@@ -763,8 +827,10 @@ function renderDetailRow(p) {
   };
   const statusLabel = s => {
     if (s==='Cumplido a tiempo') return 'A tiempo';
-    if (s==='Cumplido con retraso') return 'Con retraso';
-    return s || 'Sin fecha';
+    if (s==='Cumplido con retraso') return 'Retraso';
+    if (s==='Pendiente') return 'Pendiente';
+    if (s==='Atrasado') return 'Atrasado';
+    return 'Sin fecha';
   };
 
   const hitosHtml = hitos.map(h => {
@@ -774,22 +840,29 @@ function renderDetailRow(p) {
     if (h.estatus==='Cumplido a tiempo'||h.estatus==='Cumplido con retraso') barW=100;
     else if (h.estatus==='Atrasado') barW=70;
     else if (h.estatus==='Pendiente') barW=40;
+
+    // Show deviation if available
+    const desv = h.diasDesviacion;
+    const desvText = desv !== null && desv !== undefined ? `${desv > 0 ? '+' : ''}${desv}d` : '';
+    const desvColor = desv !== null ? (desv > 0 ? 'var(--danger)' : 'var(--accent)') : '';
+
     return `<div class="hito-detail-row">
       <div class="hito-name-d">${h.nombre}</div>
       <div class="hito-timeline"><div class="bar-real" style="width:${barW}%;background:${color};"></div></div>
-      <div class="hito-status-d"><span class="mini-badge" style="background:${color}18;color:${color};border:1px solid ${color}33;">${label}</span></div>
+      <div class="hito-status-d"><span class="mini-badge" style="background:${color}18;color:${color};border:1px solid ${color}33;">${label}</span>${desvText ? ` <span style="font-size:7px;color:${desvColor};">${desvText}</span>` : ''}</div>
     </div>`;
   }).join('');
 
   const spi = calcSPI(p.conteos);
   const spiStr = spi!==null ? spi.toFixed(2) : '—';
   const spiC = spiColor(spi);
+  const subcontratista = p.subcontratista || '—';
 
   return `<tr class="detail-row"><td colspan="15">
     <div class="detail-content">
       <div class="detail-grid">
         <div>
-          <div class="detail-hitos-title">Hitos — ${esc(p.proj)} · ${esc(p.sitio)}</div>
+          <div class="detail-hitos-title">Hitos — ${esc(p.proj)} · ${trunc(p.sitio, 30)}</div>
           ${hitosHtml}
         </div>
         <div style="padding-left:16px;">
@@ -797,14 +870,15 @@ function renderDetailRow(p) {
           <div style="font-size:10px;color:var(--text);line-height:2;">
             <strong>Cuenta:</strong> ${esc(p.cuenta)}<br>
             <strong>PM:</strong> ${esc(p.pm)}<br>
-            <strong>KAM:</strong> ${esc(p.kam)}<br>
-            <strong>Supervisor:</strong> ${esc(p.supervisor)}<br>
+            <strong>KAM:</strong> ${p.kam || '—'}<br>
+            <strong>Supervisor:</strong> ${p.supervisor || '—'}<br>
+            <strong>Subcontratista:</strong> ${subcontratista}<br>
             <strong>Tipo:</strong> ${esc(p.tipo)} · ${esc(p.tecnologia)}<br>
+            <strong>Proveeduría:</strong> ${p.tipoProv || '—'}<br>
             <strong>Fase:</strong> ${esc(p.faseActual)}<br>
-            <strong>Potencia SFV:</strong> ${p.potenciaFV||'—'} kWp<br>
-            <strong>SAE:</strong> ${p.potenciaSTO||'—'} kW / ${p.capacidadSTO||'—'} kWh<br>
-            <strong>SPI:</strong> <span style="color:${spiC};font-weight:700;">${spiStr}</span><br>
-            <strong>Hitos:</strong> ${p.conteos.aTiempo} a tiempo · ${p.conteos.conRetraso} retraso · ${p.conteos.atrasados} atrasados · ${p.conteos.pendientes} pendientes
+            <strong>Potencia SFV:</strong> ${p.potenciaFV || '—'} kWp<br>
+            <strong>SAE:</strong> ${p.potenciaSTO || '—'} kW / ${p.capacidadSTO || '—'} kWh<br>
+            <strong>SPI:</strong> <span style="color:${spiC};font-weight:700;">${spiStr}</span>
           </div>
         </div>
       </div>
@@ -853,11 +927,11 @@ function renderChartPM(){
   charts.chartPM=new Chart(document.getElementById('chartPM'),{type:'bar',data:{labels:s.map(x=>trunc(x[0],14)),datasets:[{data:s.map(x=>x[1]),backgroundColor:COLORS.accent+'88',borderColor:COLORS.accent,borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,grid:{color:'rgba(41,60,71,0.3)'},ticks:{font:{size:8}}},x:{grid:{display:false},ticks:{font:{size:7},maxRotation:45}}},onClick:(evt,els)=>{if(els.length){const idx=els[0].index;setChartFilter('pm',fullLabels[idx],'chartPM');}}}});
 }
 
-// Supervisor — donut (good for showing relative load distribution)
-function renderChartSupervisor(){
-  const c=countBy(filteredProyectos,'supervisor'); destroyChart('chartSupervisor');
+// Por Tipo — doughnut
+function renderChartTipo(){
+  const c=countBy(filteredProyectos,'tipo'); destroyChart('chartTipo');
   const labels=Object.keys(c);
-  charts.chartSupervisor=new Chart(document.getElementById('chartSupervisor'),{type:'doughnut',data:{labels,datasets:[{data:Object.values(c),backgroundColor:COLORS.palette.slice(0,labels.length),borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:'50%',plugins:{legend:{position:'right',labels:{font:{size:8},padding:5}}},onClick:(evt,els)=>{if(els.length){const idx=els[0].index;setChartFilter('supervisor',labels[idx],'chartSupervisor');}}}});
+  charts.chartTipo=new Chart(document.getElementById('chartTipo'),{type:'doughnut',data:{labels,datasets:[{data:Object.values(c),backgroundColor:[COLORS.accent,COLORS.pending,COLORS.warn,COLORS.teal,COLORS.spi],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:'50%',plugins:{legend:{position:'right',labels:{font:{size:8},padding:5}}},onClick:(evt,els)=>{if(els.length){const idx=els[0].index;setChartFilter('tipo',labels[idx],'chartTipo');}}}});
 }
 
 // Cuenta — horizontal bar (many values, better for comparison)
@@ -873,27 +947,40 @@ function renderChartEntidad(){
   charts.chartEntidad=new Chart(document.getElementById('chartEntidad'),{type:'bar',data:{labels:s.map(x=>trunc(x[0],16)),datasets:[{data:s.map(x=>x[1]),backgroundColor:COLORS.pending+'77',borderColor:COLORS.pending,borderWidth:1}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,grid:{color:'rgba(41,60,71,0.3)'},ticks:{font:{size:8}}},y:{grid:{display:false},ticks:{font:{size:8}}}},onClick:(evt,els)=>{if(els.length){const idx=els[0].index;setChartFilter('entidadFed',fullLabels[idx],'chartEntidad');}}}});
 }
 
-// SPI by PM — bar chart with color coding
-function renderChartSpiPM(){
-  const pm={};
-  filteredProyectos.forEach(p=>{
-    if(!p.pm)return;
-    if(!pm[p.pm])pm[p.pm]={at:0,cr:0,atr:0};
-    pm[p.pm].at+=p.conteos.aTiempo; pm[p.pm].cr+=p.conteos.conRetraso; pm[p.pm].atr+=p.conteos.atrasados;
-  });
-  const entries=Object.entries(pm).map(([name,s])=>{
-    const spi=calcSPI({aTiempo:s.at,conRetraso:s.cr,atrasados:s.atr});
-    return {name,spi:spi??0};
-  }).sort((a,b)=>b.spi-a.spi);
-  const fullLabels=entries.map(e=>e.name);
-  destroyChart('chartSpiPM');
-  charts.chartSpiPM=new Chart(document.getElementById('chartSpiPM'),{type:'bar',
-    data:{labels:entries.map(e=>trunc(e.name,14)),datasets:[{data:entries.map(e=>e.spi),backgroundColor:entries.map(e=>spiColor(e.spi)+'99'),borderColor:entries.map(e=>spiColor(e.spi)),borderWidth:1}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>'SPI: '+ctx.raw.toFixed(2)}}},
-      scales:{y:{min:0,max:1.2,grid:{color:'rgba(41,60,71,0.3)'},ticks:{font:{size:8}}},x:{grid:{display:false},ticks:{font:{size:7},maxRotation:45}}},
-      onClick:(evt,els)=>{if(els.length){const idx=els[0].index;setChartFilter('pm',fullLabels[idx],'chartSpiPM');}}
-    }
-  });
+// Rendimiento por subcontratista — horizontal bar
+function renderChartSubcontratista(){
+  // Use pre-calculated data from API or calculate client-side
+  const rendSub = rawData.rendimientoSubcontratista || [];
+  let entries;
+  if (rendSub.length > 0) {
+    // Filter entries to match current filtered projects
+    const filteredSubs = {};
+    filteredProyectos.forEach(p => {
+      const sub = p.subcontratista;
+      if (!sub) return;
+      if (!filteredSubs[sub]) filteredSubs[sub] = { at: 0, total: 0, proyectos: 0 };
+      filteredSubs[sub].at += p.conteos.aTiempo;
+      filteredSubs[sub].total += p.conteos.total;
+      filteredSubs[sub].proyectos++;
+    });
+    entries = Object.entries(filteredSubs).filter(([,s]) => s.total > 0).map(([name, s]) => ({ name, pct: +((s.at / s.total) * 100).toFixed(1), total: s.total })).sort((a, b) => b.pct - a.pct);
+  } else {
+    const subs = {};
+    filteredProyectos.forEach(p => {
+      const sub = p.subcontratista;
+      if (!sub) return;
+      if (!subs[sub]) subs[sub] = { at: 0, total: 0 };
+      subs[sub].at += p.conteos.aTiempo;
+      subs[sub].total += p.conteos.total;
+    });
+    entries = Object.entries(subs).filter(([,s]) => s.total > 0).map(([name, s]) => ({ name, pct: +((s.at / s.total) * 100).toFixed(1), total: s.total })).sort((a, b) => b.pct - a.pct);
+  }
+  destroyChart('chartSubcontratista');
+  const cvs = document.getElementById('chartSubcontratista');
+  if (!cvs) return;
+  if (!entries.length) { cvs.style.display = 'none'; return; }
+  cvs.style.display = '';
+  charts.chartSubcontratista = new Chart(cvs, { type: 'bar', data: { labels: entries.map(e => trunc(e.name, 18)), datasets: [{ data: entries.map(e => e.pct), backgroundColor: entries.map(e => e.pct >= 50 ? COLORS.accent + '88' : e.pct >= 25 ? COLORS.warn + '88' : COLORS.danger + '88'), borderWidth: 0 }] }, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => { const e = entries[ctx.dataIndex]; return `${e.pct}% a tiempo (${e.total} hitos)`; } } } }, scales: { x: { min: 0, max: 100, grid: { color: 'rgba(41,60,71,0.3)' }, title: { display: true, text: '% a tiempo', color: '#5a5858', font: { size: 9 } }, ticks: { font: { size: 8 } } }, y: { grid: { display: false }, ticks: { font: { size: 7 } } } } } });
 }
 
 // ─── TAB 2 ───────────────────────────────────
@@ -989,6 +1076,7 @@ function generateDemoData(){
   const Entidades=['Nuevo León','CDMX','Jalisco','Querétaro','San Luis Potosí','Estado de México','Puebla','Guanajuato','Coahuila','Quintana Roo'];
   const Supervisores=['Carlos Olvera','Miguel Ángel Torres','Sofía Reyes','Daniel Guzmán'];
   const ProvTypes=['EPC Enlight','EPC Mixto','EPC externo'];
+  const Subs=['VEN-518 Grupo H Trium','VEN-530 Construcciones DGT','VEN-504 Grupo Sci Bajio','Solarpack México','IEC México'];
   const statuses=['Cumplido a tiempo','Cumplido con retraso','Atrasado','Pendiente'];
   const pick=a=>a[Math.floor(Math.random()*a.length)];
   const ri=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
@@ -999,8 +1087,15 @@ function generateDemoData(){
     const tec=pick(Tecno);
     const hitos=HITOS_NAMES.map(nombre=>{
       let estatus=null;
-      if(!noF){estatus=closed?(Math.random()<.8?'Cumplido a tiempo':'Cumplido con retraso'):pick(statuses);}
-      return{nombre,estatus};
+      let fechaPlan=null, fechaReal=null, diasDesviacion=null;
+      if(!noF){
+        fechaPlan=`2024-${String(ri(1,12)).padStart(2,'0')}-${String(ri(1,28)).padStart(2,'0')}`;
+        estatus=closed?(Math.random()<.8?'Cumplido a tiempo':'Cumplido con retraso'):pick(statuses);
+        if(estatus==='Cumplido a tiempo'){fechaReal=fechaPlan;diasDesviacion=ri(-5,0);}
+        else if(estatus==='Cumplido con retraso'){diasDesviacion=ri(5,60);fechaReal=`2025-${String(ri(1,6)).padStart(2,'0')}-15`;}
+        else if(estatus==='Atrasado'){diasDesviacion=ri(30,200);}
+      }
+      return{nombre,estatus,fechaPlan,fechaReal,diasDesviacion};
     });
     const hCE=hitos.filter(h=>h.estatus!==null);
     const conteos={atrasados:hitos.filter(h=>h.estatus==='Atrasado').length,pendientes:hitos.filter(h=>h.estatus==='Pendiente').length,conRetraso:hitos.filter(h=>h.estatus==='Cumplido con retraso').length,aTiempo:hitos.filter(h=>h.estatus==='Cumplido a tiempo').length,total:hCE.length};
@@ -1014,13 +1109,22 @@ function generateDemoData(){
       capacidadSTO:hasBESS?String(ri(40,600)):'',
       faseActual:fase,pctObra:(Math.random()*.95).toFixed(2),
       pctProyecto:(closed?1:noF?0:Math.random()*.95).toFixed(4),
-      entidadFed:pick(Entidades),tipoProv:pick(ProvTypes),hitos,conteos
+      entidadFed:pick(Entidades),tipoProv:pick(ProvTypes),
+      subcontratista:Math.random()>0.5?pick(Subs):'',
+      hitos,conteos
     });
   }
-  const filtros={pms:[...new Set(proyectos.map(p=>p.pm))].sort(),cuentas:[...new Set(proyectos.map(p=>p.cuenta))].sort(),tipos:[...new Set(proyectos.map(p=>p.tipo))].sort(),fases:[...new Set(proyectos.map(p=>p.faseActual))].sort(),supervisores:[...new Set(proyectos.map(p=>p.supervisor))].sort(),entidades:[...new Set(proyectos.map(p=>p.entidadFed))].sort()};
+  const filtros={
+    projs:[...new Set(proyectos.map(p=>p.proj))].sort(),
+    sitios:[...new Set(proyectos.map(p=>p.sitio))].sort(),
+    pms:[...new Set(proyectos.map(p=>p.pm))].sort(),cuentas:[...new Set(proyectos.map(p=>p.cuenta))].sort(),tipos:[...new Set(proyectos.map(p=>p.tipo))].sort(),fases:[...new Set(proyectos.map(p=>p.faseActual))].sort(),supervisores:[...new Set(proyectos.map(p=>p.supervisor))].sort(),entidades:[...new Set(proyectos.map(p=>p.entidadFed))].sort(),
+    proveedurias:ProvTypes.sort(),
+    tecnologias:[...new Set(proyectos.map(p=>p.tecnologia))].sort()
+  };
   const promedioDesviacion=HITOS_NAMES.map(h=>({hito:h,promedioDias:+(Math.random()*45-5).toFixed(1)})).sort((a,b)=>b.promedioDias-a.promedioDias);
   const proyectoCritico=[...proyectos].sort((a,b)=>b.conteos.atrasados-a.conteos.atrasados)[0];
-  return{ok:true,generadoEn:new Date().toISOString(),kpis:{totalProyectos:proyectos.length,totalCuentas:filtros.cuentas.length},filtros,proyectos,porHito:[],proyectoCritico,promedioDesviacion};
+  const rendimientoSubcontratista=[];
+  return{ok:true,generadoEn:new Date().toISOString(),kpis:{totalProyectos:proyectos.length,totalCuentas:filtros.cuentas.length},filtros,proyectos,porHito:[],proyectoCritico,promedioDesviacion,rendimientoSubcontratista};
 }
 </script>
 </body>
