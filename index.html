@@ -502,6 +502,14 @@ async function fetchData() {
   try {
     rawData = DEMO_MODE ? generateDemoData() : await (await fetch(API_URL)).json();
     filteredProyectos = [...rawData.proyectos];
+                  const hitosUnicos = new Set();
+              rawData.proyectos.forEach(p => {
+                (p.hitos || []).forEach(h => hitosUnicos.add(h.nombre));
+              });
+              console.log('=== HITOS EN LA API ===');
+              console.log([...hitosUnicos].sort());
+              console.log('=== HITOS EN EL DASHBOARD ===');
+              console.log(HITOS_NAMES);
     
     buildFilters(); renderAll();
     document.getElementById('lastUpdate').textContent = 'Act: '+new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
