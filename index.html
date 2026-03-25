@@ -796,9 +796,10 @@ function renderTable() {
     });
   }
   document.getElementById('tableBody').innerHTML=rows.map(p=>{
-    const pct=parseFloat(p.pctProyecto)||0;
-    const pctW=Math.min(pct>1?pct:pct*100,100);
-    const pctD=(pct>1?pct:pct*100).toFixed(0);
+    const pctRaw = parseFloat(p.pctProyecto) || 0;
+    const pct = pctRaw > 1 ? pctRaw : pctRaw * 100;
+    const pctW = Math.min(pct, 100);
+    const pctD = Math.round(pct);
     const spi=calcSPI(p.conteos);
     const spiStr=spi!==null?spi.toFixed(2):'—';
     const isExp = expandedProj === p.proj;
@@ -885,7 +886,7 @@ function renderDetailRow(p) {
             <strong>Tipo:</strong> ${esc(p.tipo)} · ${esc(p.tecnologia)}<br>
             <strong>Proveeduría:</strong> ${p.tipoProv || '—'}<br>
             <strong>Fase:</strong> ${esc(p.faseActual)}<br>
-            <strong>% de AdO:</strong> ${p.pctObra ? (parseFloat(p.pctObra) > 1 ? parseFloat(p.pctObra).toFixed(0) : (parseFloat(p.pctObra) * 100).toFixed(0)) + '%' : '—'}<br>
+            <strong>% de AdO:</strong> ${p.pctObra ? Math.round(parseFloat(p.pctObra) > 1 ? parseFloat(p.pctObra) : parseFloat(p.pctObra) * 100) + '%' : '—'}<br>
             <strong>Potencia SFV:</strong> ${p.potenciaFV || '—'} kWp<br>
             <strong>SAE:</strong> ${p.potenciaSTO || '—'} kW / ${p.capacidadSTO || '—'} kWh<br>
             <strong>SPI:</strong> <span style="color:${spiC};font-weight:700;">${spiStr}</span>
