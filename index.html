@@ -885,6 +885,7 @@ function renderDetailRow(p) {
             <strong>Tipo:</strong> ${esc(p.tipo)} · ${esc(p.tecnologia)}<br>
             <strong>Proveeduría:</strong> ${p.tipoProv || '—'}<br>
             <strong>Fase:</strong> ${esc(p.faseActual)}<br>
+            <strong>% de AdO:</strong> ${p.pctObra ? (parseFloat(p.pctObra) > 1 ? parseFloat(p.pctObra).toFixed(0) : (parseFloat(p.pctObra) * 100).toFixed(0)) + '%' : '—'}<br>
             <strong>Potencia SFV:</strong> ${p.potenciaFV || '—'} kWp<br>
             <strong>SAE:</strong> ${p.potenciaSTO || '—'} kW / ${p.capacidadSTO || '—'} kWh<br>
             <strong>SPI:</strong> <span style="color:${spiC};font-weight:700;">${spiStr}</span>
