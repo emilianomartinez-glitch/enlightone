@@ -223,6 +223,12 @@ header { padding:16px 28px 0; background:linear-gradient(180deg,rgba(0,170,133,0
 .spi-warn { background:var(--warn); }
 .spi-bad { background:var(--danger); }
 
+/* ── TREEMAP PHASE TABLE ───────── */
+.treemap-block { cursor:pointer; transition:all .2s; }
+.treemap-block:hover { filter:brightness(1.3); }
+.treemap-block.active { outline:2px solid var(--accent); outline-offset:-2px; }
+#treemapDetailTable { animation:fadeUp .25s ease both; }
+
 /* ── LOADING ────────────────────── */
 .loading-overlay { position:fixed; inset:0; background:var(--bg); display:flex; align-items:center; justify-content:center; z-index:1000; transition:opacity .4s; }
 .loading-overlay.hidden { opacity:0; pointer-events:none; }
@@ -400,6 +406,7 @@ footer { padding:10px 28px; border-top:1px solid var(--border); display:flex; ju
           <div class="chart-title">Proyectos por fase</div>
           <div class="chart-desc">Proporción del portafolio</div>
           <div class="chart-wrapper" id="treemapContainer" style="min-height:200px;"></div>
+          <div id="treemapDetailTable"></div>
         </div>
         <div class="chart-card">
           <div class="chart-title">Hitos a tiempo por cuenta</div>
@@ -408,17 +415,17 @@ footer { padding:10px 28px; border-top:1px solid var(--border); display:flex; ju
         </div>
       </div>
 
-      <div class="section-label">Detalle por Project Manager</div>
+      <div class="section-label">Detalle por Cuenta</div>
       <div class="table-card">
-        <div class="table-header"><div class="table-title">Resumen por PM</div></div>
+        <div class="table-header"><div class="table-title">Resumen por Cuenta</div></div>
         <div class="table-scroll" style="max-height:300px;">
-          <table class="data-table" id="pmTable">
+          <table class="data-table" id="cuentaTable">
             <thead><tr>
-              <th>PM</th><th>Proyectos</th><th>Evaluados</th>
+              <th>Cuenta</th><th>Proyectos</th><th>Evaluados</th>
               <th>A tiempo</th><th>Retraso</th><th>Atrasados</th>
               <th>Pend.</th><th>% A tiempo</th><th>SPI</th>
             </tr></thead>
-            <tbody id="pmTableBody"></tbody>
+            <tbody id="cuentaTableBody"></tbody>
           </table>
         </div>
       </div>
@@ -441,6 +448,7 @@ let rawData = null, filteredProyectos = [], charts = {}, sortState = { col:null,
 let chartFilter = null; // {key:'faseActual', value:'Fase Instalación', source:'chartFases'}
 let chartFilterSource = null; // which chart triggered the filter (skip re-rendering it)
 let kpiFilter = null; // 'atrasados' | 'conRetraso' | 'pendientes' | 'aTiempo' | null
+let treemapActiveFase = null; // fase selected in treemap for detail table
 
 function toggleKpiFilter(key) {
   kpiFilter = (kpiFilter === key) ? null : key;
@@ -665,7 +673,7 @@ function renderAll() {
   renderChartHitos(); renderChartFases(); renderChartTipo(); renderChartProv();
   renderChartPM(); renderChartCuenta(); renderChartEntidad();
   renderChartSubcontratista();
-  renderKPIs2(); renderChartDesviacion(); renderChartRendPM(); renderTreemap(); renderChartCuentaRendimiento(); renderPMTable();
+  renderKPIs2(); renderChartDesviacion(); renderChartRendPM(); renderTreemap(); renderChartCuentaRendimiento(); renderCuentaTable();
 }
 
 // ─── ALERT BANNER — Calidad de datos ─────────
@@ -1023,10 +1031,13 @@ function renderChartDesviacion(){
 
 function renderChartRendPM(){
   const cta={};
-  filteredProyectos.forEach(p=>{if(!p.cuenta)return;if(!cta[p.cuenta])cta[p.cuenta]={n:0,at:0,tot:0};cta[p.cuenta].n++;cta[p.cuenta].at+=p.conteos.aTiempo;cta[p.cuenta].tot+=p.conteos.total;});
-  const pts=Object.entries(cta).map(([name,s])=>({x:s.tot?+((s.at/s.tot)*100).toFixed(1):0,y:s.n,name}));
+  filteredProyectos.forEach(p=>{if(!p.cuenta)return;if(!cta[p.cuenta])cta[p.cuenta]={n:0,at:0,cr:0,atr:0,tot:0};cta[p.cuenta].n++;cta[p.cuenta].at+=p.conteos.aTiempo;cta[p.cuenta].cr+=p.conteos.conRetraso;cta[p.cuenta].atr+=p.conteos.atrasados;cta[p.cuenta].tot+=p.conteos.total;});
+  const pts=Object.entries(cta).map(([name,s])=>{
+    const spi=calcSPI({aTiempo:s.at,conRetraso:s.cr,atrasados:s.atr});
+    return {x:s.tot?+((s.at/s.tot)*100).toFixed(1):0,y:s.n,name,spi};
+  });
   destroyChart('chartRendPM');
-  charts.chartRendPM=new Chart(document.getElementById('chartRendPM'),{type:'bubble',data:{datasets:[{data:pts.map(p=>({x:p.x,y:p.y,r:Math.max(5,p.y*1.8)})),backgroundColor:COLORS.teal+'55',borderColor:COLORS.teal,borderWidth:1.5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>{const p=pts[ctx.dataIndex];return `${p.name}: ${p.x}% a tiempo · ${p.y} proyectos`;}}}},scales:{x:{title:{display:true,text:'% hitos a tiempo',color:'#5a5858',font:{size:9}},min:0,max:100,grid:{color:'rgba(41,60,71,0.3)'},ticks:{font:{size:8}}},y:{title:{display:true,text:'Proyectos',color:'#5a5858',font:{size:9}},beginAtZero:true,grid:{color:'rgba(41,60,71,0.3)'},ticks:{font:{size:8}}}}}});
+  charts.chartRendPM=new Chart(document.getElementById('chartRendPM'),{type:'bubble',data:{datasets:[{data:pts.map(p=>({x:p.x,y:p.y,r:Math.max(5,p.y*1.8)})),backgroundColor:pts.map(p=>spiColor(p.spi)+'55'),borderColor:pts.map(p=>spiColor(p.spi)),borderWidth:1.5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>{const p=pts[ctx.dataIndex];const spiStr=p.spi!==null?p.spi.toFixed(2):'—';return `${p.name}: ${p.x}% a tiempo · ${p.y} proy · SPI ${spiStr}`;}}}},scales:{x:{title:{display:true,text:'% hitos a tiempo',color:'#5a5858',font:{size:9}},min:0,max:100,grid:{color:'rgba(41,60,71,0.3)'},ticks:{font:{size:8}}},y:{title:{display:true,text:'Proyectos',color:'#5a5858',font:{size:9}},beginAtZero:true,grid:{color:'rgba(41,60,71,0.3)'},ticks:{font:{size:8}}}}}});
 }
 
 function renderTreemap(){
@@ -1034,11 +1045,57 @@ function renderTreemap(){
   const total=Object.values(c).reduce((s,v)=>s+v,0);
   const sorted=Object.entries(c).sort((a,b)=>b[1]-a[1]);
   const ct=document.getElementById('treemapContainer');
-  if(!total){ct.innerHTML='<div style="text-align:center;padding:40px;color:var(--text3);">Sin datos</div>';return;}
+  if(!total){ct.innerHTML='<div style="text-align:center;padding:40px;color:var(--text3);">Sin datos</div>';document.getElementById('treemapDetailTable').innerHTML='';return;}
   ct.innerHTML=`<div style="display:flex;flex-wrap:wrap;gap:2px;height:200px;">${sorted.map(([f,n],i)=>{
     const pct=n/total*100;const col=COLORS.palette[i%COLORS.palette.length];
-    return `<div style="flex:${pct} 1 0;min-width:50px;background:${col}1a;border:1px solid ${col}33;padding:8px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;border-radius:2px;transition:background .2s;cursor:default;" onmouseenter="this.style.background='${col}2a'" onmouseleave="this.style.background='${col}1a'"><div style="font-family:var(--font-display);font-weight:800;font-size:18px;color:${col}">${n}</div><div style="font-size:8px;color:var(--text2);letter-spacing:1px;text-transform:uppercase;margin-top:2px;">${trunc(f,16)}</div><div style="font-size:8px;color:var(--text3)">${pct.toFixed(0)}%</div></div>`;
+    const isActive=treemapActiveFase===f;
+    return `<div class="treemap-block${isActive?' active':''}" onclick="toggleTreemapFase('${esc(f)}')" style="flex:${pct} 1 0;min-width:50px;background:${col}1a;border:1px solid ${col}33;padding:8px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;border-radius:2px;"><div style="font-family:var(--font-display);font-weight:800;font-size:18px;color:${col}">${n}</div><div style="font-size:8px;color:var(--text2);letter-spacing:1px;text-transform:uppercase;margin-top:2px;">${trunc(f,16)}</div><div style="font-size:8px;color:var(--text3)">${pct.toFixed(0)}%</div></div>`;
   }).join('')}</div>`;
+  renderTreemapDetail();
+}
+
+function toggleTreemapFase(fase){
+  treemapActiveFase=(treemapActiveFase===fase)?null:fase;
+  renderTreemap();
+}
+
+function renderTreemapDetail(){
+  const el=document.getElementById('treemapDetailTable');
+  if(!treemapActiveFase){el.innerHTML='';return;}
+  const rows=filteredProyectos.filter(p=>p.faseActual===treemapActiveFase);
+  if(!rows.length){el.innerHTML='';treemapActiveFase=null;return;}
+  el.innerHTML=`<div style="margin-top:10px;">
+    <div class="table-card">
+      <div class="table-header">
+        <div style="display:flex;align-items:baseline;gap:6px;">
+          <div class="table-title">${esc(treemapActiveFase)}</div>
+          <span class="table-count">(${rows.length})</span>
+        </div>
+      </div>
+      <div class="table-scroll" style="max-height:260px;">
+        <table class="data-table">
+          <thead><tr>
+            <th>PROJ</th><th>Sitio</th><th>Cuenta</th><th>PM</th>
+            <th>SPI</th><th>Atr</th><th>Pend</th><th>OK</th>
+          </tr></thead>
+          <tbody>${rows.map(p=>{
+            const spi=calcSPI(p.conteos);
+            const spiStr=spi!==null?spi.toFixed(2):'—';
+            return `<tr>
+              <td><span class="proj-id">${esc(p.proj)}</span></td>
+              <td>${trunc(p.sitio,24)}</td>
+              <td>${esc(p.cuenta)}</td>
+              <td>${trunc(p.pm,16)}</td>
+              <td><span class="spi-indicator"><span class="spi-dot ${spiClass(spi)}"></span>${spiStr}</span></td>
+              <td><span class="mini-badge badge-danger">${p.conteos.atrasados}</span></td>
+              <td><span class="mini-badge badge-pending">${p.conteos.pendientes}</span></td>
+              <td><span class="mini-badge badge-accent">${p.conteos.aTiempo}</span></td>
+            </tr>`;
+          }).join('')}</tbody>
+        </table>
+      </div>
+    </div>
+  </div>`;
 }
 
 function renderChartCuentaRendimiento(){
@@ -1049,10 +1106,10 @@ function renderChartCuentaRendimiento(){
   charts.chartCuentaRendimiento=new Chart(document.getElementById('chartCuentaRendimiento'),{type:'bar',data:{labels:e.map(x=>trunc(x.cuenta,16)),datasets:[{data:e.map(x=>x.pct),backgroundColor:e.map(x=>x.pct>=70?COLORS.accent+'88':x.pct>=40?COLORS.warn+'88':COLORS.danger+'88'),borderWidth:0}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{min:0,max:100,grid:{color:'rgba(41,60,71,0.3)'},title:{display:true,text:'%',color:'#5a5858',font:{size:9}},ticks:{font:{size:8}}},y:{grid:{display:false},ticks:{font:{size:8}}}}}});
 }
 
-function renderPMTable(){
-  const pm={};
-  filteredProyectos.forEach(p=>{if(!p.pm)return;if(!pm[p.pm])pm[p.pm]={n:0,at:0,cr:0,atr:0,pend:0,tot:0};pm[p.pm].n++;pm[p.pm].at+=p.conteos.aTiempo;pm[p.pm].cr+=p.conteos.conRetraso;pm[p.pm].atr+=p.conteos.atrasados;pm[p.pm].pend+=p.conteos.pendientes;pm[p.pm].tot+=p.conteos.total;});
-  document.getElementById('pmTableBody').innerHTML=Object.entries(pm).sort((a,b)=>b[1].n-a[1].n).map(([name,s])=>{
+function renderCuentaTable(){
+  const cta={};
+  filteredProyectos.forEach(p=>{if(!p.cuenta)return;if(!cta[p.cuenta])cta[p.cuenta]={n:0,at:0,cr:0,atr:0,pend:0,tot:0};cta[p.cuenta].n++;cta[p.cuenta].at+=p.conteos.aTiempo;cta[p.cuenta].cr+=p.conteos.conRetraso;cta[p.cuenta].atr+=p.conteos.atrasados;cta[p.cuenta].pend+=p.conteos.pendientes;cta[p.cuenta].tot+=p.conteos.total;});
+  document.getElementById('cuentaTableBody').innerHTML=Object.entries(cta).sort((a,b)=>b[1].atr-a[1].atr).map(([name,s])=>{
     const pct=s.tot?((s.at/s.tot)*100).toFixed(1):'0';
     const spi=calcSPI({aTiempo:s.at,conRetraso:s.cr,atrasados:s.atr});
     const spiStr=spi!==null?spi.toFixed(2):'—';
