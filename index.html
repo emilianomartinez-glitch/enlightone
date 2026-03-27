@@ -421,9 +421,9 @@ footer { padding:10px 28px; border-top:1px solid var(--border); display:flex; ju
         <div class="table-scroll" style="max-height:300px;">
           <table class="data-table" id="cuentaTable">
             <thead><tr>
-              <th>Cuenta</th><th>Proyectos</th><th>Evaluados</th>
-              <th>A tiempo</th><th>Retraso</th><th>Atrasados</th>
-              <th>Pend.</th><th>% A tiempo</th><th>SPI</th>
+              <th>Cuenta</th><th class="sortable-cta" data-sort="n">Proyectos <span class="sort-arrow"></span></th><th>Evaluados</th>
+              <th class="sortable-cta" data-sort="at">A tiempo <span class="sort-arrow"></span></th><th class="sortable-cta" data-sort="cr">Retraso <span class="sort-arrow"></span></th><th class="sortable-cta" data-sort="atr">Atrasados <span class="sort-arrow"></span></th>
+              <th>Pend.</th><th class="sortable-cta" data-sort="pct">% A tiempo <span class="sort-arrow"></span></th><th class="sortable-cta" data-sort="spi">SPI <span class="sort-arrow"></span></th>
             </tr></thead>
             <tbody id="cuentaTableBody"></tbody>
           </table>
@@ -449,6 +449,8 @@ let chartFilter = null; // {key:'faseActual', value:'Fase Instalación', source:
 let chartFilterSource = null; // which chart triggered the filter (skip re-rendering it)
 let kpiFilter = null; // 'atrasados' | 'conRetraso' | 'pendientes' | 'aTiempo' | null
 let treemapActiveFase = null; // fase selected in treemap for detail table
+let cuentaSortState = { col: null, asc: true };
+let faseSortState = { col: null, asc: true };
 
 function toggleKpiFilter(key) {
   kpiFilter = (kpiFilter === key) ? null : key;
@@ -1062,8 +1064,10 @@ function toggleTreemapFase(fase){
 function renderTreemapDetail(){
   const el=document.getElementById('treemapDetailTable');
   if(!treemapActiveFase){el.innerHTML='';return;}
-  const rows=filteredProyectos.filter(p=>p.faseActual===treemapActiveFase);
-  if(!rows.length){el.innerHTML='';treemapActiveFase=null;return;}
+let rows=filteredProyectos.filter(p=>p.faseActual===treemapActiveFase);
+if(faseSortState.col==='spi'){
+  rows.sort((a,b)=>{const va=calcSPI(a.conteos)??-1;const vb=calcSPI(b.conteos)??-1;return faseSortState.asc?va-vb:vb-va;});
+}  if(!rows.length){el.innerHTML='';treemapActiveFase=null;return;}
   el.innerHTML=`<div style="margin-top:10px;">
     <div class="table-card">
       <div class="table-header">
@@ -1076,7 +1080,7 @@ function renderTreemapDetail(){
         <table class="data-table">
           <thead><tr>
             <th>PROJ</th><th>Sitio</th><th>Cuenta</th><th>PM</th>
-            <th>SPI</th><th>Atr</th><th>Pend</th><th>OK</th>
+            <th class="sortable-fase" data-sort="spi" style="cursor:pointer">SPI <span class="sort-arrow"></span></th><th>Atr</th><th>Pend</th><th>OK</th>
           </tr></thead>
           <tbody>${rows.map(p=>{
             const spi=calcSPI(p.conteos);
@@ -1096,6 +1100,15 @@ function renderTreemapDetail(){
       </div>
     </div>
   </div>`;
+  // Bind sort listener for fase detail table
+  document.querySelectorAll('.sortable-fase').forEach(th=>{
+    th.onclick=()=>{
+      if(faseSortState.col==='spi')faseSortState.asc=!faseSortState.asc;
+      else{faseSortState.col='spi';faseSortState.asc=false;}
+      th.classList.add('sorted');th.querySelector('.sort-arrow').textContent=faseSortState.asc?'↑':'↓';
+      renderTreemapDetail();
+    };
+  });
 }
 
 function renderChartCuentaRendimiento(){
@@ -1109,10 +1122,24 @@ function renderChartCuentaRendimiento(){
 function renderCuentaTable(){
   const cta={};
   filteredProyectos.forEach(p=>{if(!p.cuenta)return;if(!cta[p.cuenta])cta[p.cuenta]={n:0,at:0,cr:0,atr:0,pend:0,tot:0};cta[p.cuenta].n++;cta[p.cuenta].at+=p.conteos.aTiempo;cta[p.cuenta].cr+=p.conteos.conRetraso;cta[p.cuenta].atr+=p.conteos.atrasados;cta[p.cuenta].pend+=p.conteos.pendientes;cta[p.cuenta].tot+=p.conteos.total;});
-  document.getElementById('cuentaTableBody').innerHTML=Object.entries(cta).sort((a,b)=>b[1].atr-a[1].atr).map(([name,s])=>{
-    const pct=s.tot?((s.at/s.tot)*100).toFixed(1):'0';
+  let entries=Object.entries(cta).map(([name,s])=>{
+    const pct=s.tot?+((s.at/s.tot)*100).toFixed(1):0;
     const spi=calcSPI({aTiempo:s.at,conRetraso:s.cr,atrasados:s.atr});
-    const spiStr=spi!==null?spi.toFixed(2):'—';
+    return [name,{...s,pct,spi}];
+  });
+  if(cuentaSortState.col){
+    entries.sort((a,b)=>{
+      let va,vb;
+      if(cuentaSortState.col==='spi'){va=a[1].spi??-1;vb=b[1].spi??-1;}
+      else if(cuentaSortState.col==='pct'){va=a[1].pct;vb=b[1].pct;}
+      else{va=a[1][cuentaSortState.col];vb=b[1][cuentaSortState.col];}
+      return cuentaSortState.asc?va-vb:vb-va;
+    });
+  } else {
+    entries.sort((a,b)=>b[1].atr-a[1].atr);
+  }
+  document.getElementById('cuentaTableBody').innerHTML=entries.map(([name,s])=>{
+    const spiStr=s.spi!==null?s.spi.toFixed(2):'—';
     return `<tr>
       <td style="font-weight:500;color:var(--accent)">${esc(name)}</td>
       <td>${s.n}</td><td>${s.tot}</td>
@@ -1120,10 +1147,22 @@ function renderCuentaTable(){
       <td><span class="mini-badge badge-warn">${s.cr}</span></td>
       <td><span class="mini-badge badge-danger">${s.atr}</span></td>
       <td><span class="mini-badge badge-pending">${s.pend}</span></td>
-      <td><div class="progress-cell"><div class="mini-bar"><div class="mini-bar-fill" style="width:${pct}%"></div></div><span class="progress-pct">${pct}%</span></div></td>
-      <td><span class="spi-indicator"><span class="spi-dot ${spiClass(spi)}"></span>${spiStr}</span></td>
+      <td><div class="progress-cell"><div class="mini-bar"><div class="mini-bar-fill" style="width:${s.pct}%"></div></div><span class="progress-pct">${s.pct}%</span></div></td>
+      <td><span class="spi-indicator"><span class="spi-dot ${spiClass(s.spi)}"></span>${spiStr}</span></td>
     </tr>`;
   }).join('');
+  // Bind sort listeners
+  document.querySelectorAll('.sortable-cta').forEach(th=>{
+    th.style.cursor='pointer';
+    th.onclick=()=>{
+      const col=th.dataset.sort;
+      if(cuentaSortState.col===col)cuentaSortState.asc=!cuentaSortState.asc;
+      else{cuentaSortState.col=col;cuentaSortState.asc=false;}
+      document.querySelectorAll('.sortable-cta').forEach(h=>{h.classList.remove('sorted');h.querySelector('.sort-arrow').textContent='';});
+      th.classList.add('sorted');th.querySelector('.sort-arrow').textContent=cuentaSortState.asc?'↑':'↓';
+      renderCuentaTable();
+    };
+  });
 }
 
 // ─── HELPERS ─────────────────────────────────
