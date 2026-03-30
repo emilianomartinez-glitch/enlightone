@@ -239,6 +239,46 @@ header { padding:16px 28px 0; background:linear-gradient(180deg,rgba(0,170,133,0
 @keyframes loadSlide { 0%{left:-36px;} 100%{left:100px;} }
 .loading-text { font-size:10px; color:var(--text3); letter-spacing:2px; text-transform:uppercase; margin-top:12px; }
 
+/* ── TAB 3: CRONOGRAMA ──────────── */
+.gantt-controls { display:flex; gap:8px; align-items:center; margin-bottom:12px; flex-wrap:wrap; }
+.gantt-search { font-family:var(--font-body); font-size:10px; color:var(--text); background:var(--surface); border:1px solid var(--border); padding:5px 10px; min-width:200px; border-radius:2px; }
+.gantt-search:focus { border-color:var(--accent); outline:none; }
+.gantt-zoom { font-family:var(--font-body); font-size:8px; letter-spacing:1px; text-transform:uppercase; color:var(--text2); background:var(--surface); border:1px solid var(--border); padding:4px 10px; cursor:pointer; border-radius:2px; transition:all .2s; }
+.gantt-zoom:hover { border-color:var(--accent); color:var(--accent); }
+.gantt-zoom.active { color:var(--accent); border-color:var(--accent); background:var(--accent-dim); }
+
+.gantt-container { background:var(--surface); border:1px solid var(--border); border-radius:3px; overflow-x:auto; overflow-y:auto; max-height:520px; position:relative; }
+.gantt-table { border-collapse:collapse; width:max-content; min-width:100%; }
+.gantt-table thead th { position:sticky; top:0; z-index:3; background:var(--surface2); font-family:var(--font-display); font-weight:600; font-size:7px; letter-spacing:1px; text-transform:uppercase; color:var(--text3); padding:4px 2px; border-bottom:1px solid var(--border); text-align:center; white-space:nowrap; }
+.gantt-table thead th.gantt-label-col { position:sticky; left:0; z-index:4; background:var(--surface2); text-align:left; padding-left:10px; min-width:180px; }
+.gantt-table tbody td { padding:0; height:22px; border-bottom:1px solid rgba(41,60,71,0.15); position:relative; }
+.gantt-table tbody td.gantt-label-cell { position:sticky; left:0; z-index:2; background:var(--surface); padding:3px 10px; font-size:9px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:180px; cursor:pointer; transition:color .15s; }
+.gantt-table tbody td.gantt-label-cell:hover { color:var(--accent); }
+.gantt-month-sep { border-left:1px solid rgba(41,60,71,0.3); }
+.gantt-today { position:absolute; top:0; bottom:0; width:2px; background:var(--danger); z-index:1; opacity:.7; }
+
+.gantt-bar { position:absolute; top:3px; height:16px; border-radius:2px; min-width:2px; transition:opacity .15s; cursor:pointer; }
+.gantt-bar:hover { opacity:1 !important; filter:brightness(1.3); }
+.gantt-bar-plan { opacity:.25; top:5px; height:12px; border:1px dashed rgba(255,255,255,0.3); background:transparent !important; }
+.gantt-bar-hito { width:8px; height:8px; top:7px; border-radius:50%; border:1.5px solid #fff; margin-left:-4px; z-index:2; }
+.gantt-tooltip-box { position:fixed; z-index:100; background:var(--surface2); border:1px solid var(--border); border-radius:3px; padding:8px 12px; font-size:9px; color:var(--text); pointer-events:none; max-width:280px; line-height:1.5; box-shadow:0 4px 16px rgba(0,0,0,.5); }
+.gantt-tooltip-box strong { color:var(--accent); }
+
+.scatter-card { background:var(--surface); border:1px solid var(--border); border-radius:3px; padding:14px 16px; }
+.crono-kpi-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin-bottom:16px; }
+
+.forecast-table { width:100%; border-collapse:collapse; font-size:10px; }
+.forecast-table th { padding:6px 8px; text-align:left; font-family:var(--font-display); font-weight:600; font-size:8px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text3); border-bottom:1px solid var(--border); background:var(--surface2); position:sticky; top:0; z-index:2; cursor:pointer; user-select:none; white-space:nowrap; }
+.forecast-table th:hover { color:var(--accent); }
+.forecast-table td { padding:5px 8px; border-bottom:1px solid rgba(41,60,71,0.2); white-space:nowrap; }
+.forecast-table tr:hover td { background:rgba(0,170,133,0.03); }
+.desv-positive { color:var(--danger); font-weight:600; }
+.desv-negative { color:var(--accent); font-weight:600; }
+.desv-zero { color:var(--text3); }
+.intercon-check { display:inline-block; width:14px; height:14px; line-height:14px; text-align:center; border-radius:2px; font-size:9px; font-weight:700; }
+.intercon-ok { background:rgba(0,170,133,0.15); color:var(--accent); }
+.intercon-no { background:rgba(255,71,87,0.15); color:var(--danger); }
+  
 footer { padding:10px 28px; border-top:1px solid var(--border); display:flex; justify-content:space-between; font-size:9px; color:var(--text3); letter-spacing:1px; }
 
 @keyframes fadeUp { from{opacity:0;transform:translateY(8px);} to{opacity:1;transform:translateY(0);} }
@@ -276,6 +316,7 @@ footer { padding:10px 28px; border-top:1px solid var(--border); display:flex; ju
     <div class="tabs">
       <button class="tab-btn active" data-tab="tab1">Estado General</button>
       <button class="tab-btn" data-tab="tab2">Rendimiento y Desviaciones</button>
+      <button class="tab-btn" data-tab="tab3">Cronograma y Pronóstico</button>
     </div>
   </header>
 
@@ -431,6 +472,70 @@ footer { padding:10px 28px; border-top:1px solid var(--border); display:flex; ju
       </div>
     </div>
 
+    <!-- ═══════════ TAB 3: CRONOGRAMA Y PRONÓSTICO ═══════════ -->
+    <div class="tab-content" id="tab3">
+      <div class="filters-bar" id="filtersBar3"></div>
+
+      <div class="section-label">Resumen de pronóstico</div>
+      <div class="crono-kpi-grid" id="cronoKpiGrid"></div>
+
+      <div class="section-label">Gantt del portafolio</div>
+      <div class="gantt-controls">
+        <input type="text" class="gantt-search" id="ganttSearch" placeholder="Buscar proyecto o cuenta…">
+        <button class="gantt-zoom active" data-zoom="month" onclick="setGanttZoom('month')">Mes</button>
+        <button class="gantt-zoom" data-zoom="quarter" onclick="setGanttZoom('quarter')">Trimestre</button>
+        <button class="gantt-zoom" data-zoom="year" onclick="setGanttZoom('year')">Año</button>
+        <span style="margin-left:auto;font-size:8px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;">
+          <span style="display:inline-block;width:10px;height:4px;background:var(--accent);border-radius:1px;vertical-align:middle;margin-right:3px;"></span>Real
+          <span style="display:inline-block;width:10px;height:4px;border:1px dashed var(--text3);border-radius:1px;vertical-align:middle;margin:0 3px 0 8px;"></span>Plan
+        </span>
+      </div>
+      <div class="gantt-container" id="ganttContainer"></div>
+
+      <div class="section-label" style="margin-top:16px;">Dispersión: desviación vs avance</div>
+      <div class="charts-row">
+        <div class="scatter-card">
+          <div class="chart-title">Desviación (días) vs % pronóstico</div>
+          <div class="chart-desc">Cada burbuja = 1 proyecto · tamaño = semanas transcurridas</div>
+          <div class="chart-wrapper" style="height:280px"><canvas id="chartScatterCrono"></canvas></div>
+        </div>
+        <div class="scatter-card">
+          <div class="chart-title">Semanas esperadas vs semanas reales</div>
+          <div class="chart-desc">Línea diagonal = sin desviación</div>
+          <div class="chart-wrapper" style="height:280px"><canvas id="chartScatterSemanas"></canvas></div>
+        </div>
+      </div>
+
+      <div class="section-label" style="margin-top:16px;">Detalle de pronósticos</div>
+      <div class="table-card">
+        <div class="table-header">
+          <div style="display:flex;align-items:baseline;gap:6px;">
+            <div class="table-title">Fechas y pronósticos</div>
+            <span class="table-count" id="forecastTableCount"></span>
+          </div>
+        </div>
+        <div class="table-scroll" style="max-height:400px;">
+          <table class="forecast-table" id="forecastTable">
+            <thead><tr>
+              <th data-fsort="proj">PROJ</th>
+              <th data-fsort="cuenta">Cuenta</th>
+              <th data-fsort="pm">PM</th>
+              <th data-fsort="faseActual">Fase</th>
+              <th data-fsort="pctPronostico">% Pron</th>
+              <th data-fsort="fechaInicio">Inicio</th>
+              <th data-fsort="fechaFin">Fin pron.</th>
+              <th data-fsort="previstaCommissioning">Comm. prev.</th>
+              <th data-fsort="diasDesviacion">Desv. días</th>
+              <th data-fsort="semanasEsperadas">Sem. esp.</th>
+              <th data-fsort="semanaActual">Sem. real</th>
+              <th>Interc.</th>
+            </tr></thead>
+            <tbody id="forecastTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <footer>
@@ -540,8 +645,8 @@ function buildFilters() {
     {key:'supervisor',label:'Supervisor',values:rawData.filtros.supervisores||[]},
     {key:'entidadFed',label:'Entidad',values:rawData.filtros.entidades||[]},
   ];
-  ['filtersBar','filtersBar2'].forEach(barId => {
-    const bar = document.getElementById(barId);
+['filtersBar','filtersBar2','filtersBar3'].forEach(barId => {
+  const bar = document.getElementById(barId);
     if (!bar) return;
     bar.innerHTML = '';
     defs.forEach(f => {
@@ -581,14 +686,12 @@ function buildFilters() {
 }
 
 function syncFilters(sourceBarId, key, value) {
-  const targetBarId = sourceBarId==='filtersBar'?'filtersBar2':'filtersBar';
-  const targetBar = document.getElementById(targetBarId);
-  if (!targetBar) return;
-  targetBar.querySelectorAll('.filter-select').forEach(s => {
-    if (s.dataset.filterKey===key) s.value=value;
-  });
-  targetBar.querySelectorAll('.filter-search').forEach(s => {
-    if (s.dataset.filterKey===key) s.value=value;
+  ['filtersBar','filtersBar2','filtersBar3'].forEach(barId => {
+    if (barId === sourceBarId) return;
+    const bar = document.getElementById(barId);
+    if (!bar) return;
+    bar.querySelectorAll('.filter-select').forEach(s => { if (s.dataset.filterKey === key) s.value = value; });
+    bar.querySelectorAll('.filter-search').forEach(s => { if (s.dataset.filterKey === key) s.value = value; });
   });
 }
 
@@ -676,6 +779,8 @@ function renderAll() {
   renderChartPM(); renderChartCuenta(); renderChartEntidad();
   renderChartSubcontratista();
   renderKPIs2(); renderChartDesviacion(); renderChartRendPM(); renderTreemap(); renderChartCuentaRendimiento(); renderCuentaTable();
+  renderTab3();
+
 }
 
 // ─── ALERT BANNER — Calidad de datos ─────────
@@ -1164,6 +1269,263 @@ function renderCuentaTable(){
     };
   });
 }
+
+  // ═══════════════════════════════════════════════════════════
+// TAB 3: CRONOGRAMA Y PRONÓSTICO
+// ═══════════════════════════════════════════════════════════
+let ganttZoom = 'month';
+let forecastSortState = { col: null, asc: true };
+let filteredPronosticos = [];
+
+function setGanttZoom(z) {
+  ganttZoom = z;
+  document.querySelectorAll('.gantt-zoom').forEach(b => b.classList.toggle('active', b.dataset.zoom === z));
+  renderGantt();
+}
+
+function getFilteredPronosticos() {
+  const prons = rawData.pronosticos || [];
+  // Apply same filters as main dashboard
+  const filters = {};
+  const seen = {};
+  document.querySelectorAll('.filter-select').forEach(s => { if (s.value && !seen[s.dataset.filterKey]) { filters[s.dataset.filterKey] = s.value; seen[s.dataset.filterKey] = true; } });
+  document.querySelectorAll('.filter-search').forEach(s => { if (s.value && !seen[s.dataset.filterKey]) { filters[s.dataset.filterKey] = s.value; seen[s.dataset.filterKey] = true; } });
+  if (chartFilter) filters[chartFilter.key] = chartFilter.value;
+  filteredPronosticos = prons.filter(p => Object.entries(filters).every(([k, v]) => p[k] === v));
+  return filteredPronosticos;
+}
+
+function renderTab3() {
+  if (!rawData?.pronosticos?.length) return;
+  getFilteredPronosticos();
+  renderCronoKPIs();
+  renderGantt();
+  renderScatterCrono();
+  renderScatterSemanas();
+  renderForecastTable();
+}
+
+// ── KPIs ──
+function renderCronoKPIs() {
+  const prons = filteredPronosticos;
+  if (!prons.length) { document.getElementById('cronoKpiGrid').innerHTML = ''; return; }
+
+  const avgDesv = prons.reduce((s, p) => s + (p.diasDesviacion || 0), 0) / prons.length;
+  const avgPct = prons.reduce((s, p) => s + (p.pctPronostico || 0), 0) / prons.length;
+  const conInterc = prons.filter(p => p.checkInterconexion?.check).length;
+  const sinInterc = prons.filter(p => p.checkInterconexion && !p.checkInterconexion.check).length;
+  const overrun = prons.filter(p => p.semanaActual > p.semanasEsperadas).length;
+
+  const cards = [
+    { label: 'Proyectos', value: prons.length, sub: 'con pronóstico', cls: 'c-neutral' },
+    { label: 'Desv. promedio', value: Math.round(avgDesv) + 'd', sub: avgDesv > 30 ? 'alto riesgo' : avgDesv > 15 ? 'moderado' : 'en control', cls: avgDesv > 30 ? 'c-danger' : avgDesv > 15 ? 'c-warn' : 'c-accent' },
+    { label: '% Pron. prom.', value: (avgPct * 100).toFixed(0) + '%', sub: 'avance pronóstico', cls: 'c-accent' },
+    { label: 'Interconexión', value: conInterc + '/' + (conInterc + sinInterc), sub: sinInterc + ' pendientes', cls: sinInterc > 0 ? 'c-warn' : 'c-accent' },
+    { label: 'Sobre plazo', value: overrun, sub: 'semanas reales > esperadas', cls: overrun > 0 ? 'c-danger' : 'c-accent' },
+  ];
+  document.getElementById('cronoKpiGrid').innerHTML = cards.map((c, i) => `
+    <div class="kpi-card ${c.cls} animate-in" style="animation-delay:${i * 0.03}s">
+      <div class="kpi-label">${c.label}</div>
+      <div class="kpi-value" style="font-size:${String(c.value).length > 6 ? 20 : 28}px">${c.value}</div>
+      <div class="kpi-sub">${c.sub}</div>
+    </div>`).join('');
+}
+
+// ── GANTT ──
+function renderGantt() {
+  const container = document.getElementById('ganttContainer');
+  let prons = [...filteredPronosticos];
+  const q = (document.getElementById('ganttSearch')?.value || '').toLowerCase();
+  if (q) prons = prons.filter(p => (p.proj + ' ' + p.sitio + ' ' + p.cuenta).toLowerCase().includes(q));
+
+  if (!prons.length) { container.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text3);">Sin datos de pronóstico</div>'; return; }
+
+  // Compute global date range
+  let minD = Infinity, maxD = -Infinity;
+  prons.forEach(p => {
+    const allDates = [p.fechaInicio, p.fechaFin];
+    (p.fases || []).forEach(f => { allDates.push(f.fechaInicio, f.fechaFin, f.planInicio, f.planFin); });
+    allDates.forEach(d => { if (d) { const t = new Date(d).getTime(); if (t < minD) minD = t; if (t > maxD) maxD = t; } });
+  });
+  const rangeStart = new Date(minD); rangeStart.setDate(1);
+  const rangeEnd = new Date(maxD); rangeEnd.setMonth(rangeEnd.getMonth() + 1); rangeEnd.setDate(0);
+  const today = new Date();
+
+  // Build columns
+  const cols = []; let cur = new Date(rangeStart);
+  if (ganttZoom === 'month') {
+    while (cur <= rangeEnd) { cols.push({ label: cur.toLocaleDateString('es-MX', { month: 'short', year: '2-digit' }), start: new Date(cur), end: new Date(cur.getFullYear(), cur.getMonth() + 1, 0) }); cur.setMonth(cur.getMonth() + 1); }
+  } else if (ganttZoom === 'quarter') {
+    while (cur <= rangeEnd) { const qEnd = new Date(cur.getFullYear(), cur.getMonth() + 3, 0); cols.push({ label: 'T' + (Math.floor(cur.getMonth() / 3) + 1) + ' ' + String(cur.getFullYear()).slice(2), start: new Date(cur), end: qEnd }); cur.setMonth(cur.getMonth() + 3); }
+  } else {
+    while (cur <= rangeEnd) { cols.push({ label: String(cur.getFullYear()), start: new Date(cur.getFullYear(), 0, 1), end: new Date(cur.getFullYear(), 11, 31) }); cur.setFullYear(cur.getFullYear() + 1); }
+  }
+
+  const totalMs = rangeEnd.getTime() - rangeStart.getTime();
+  const pxPerMs = 1; // we'll use % instead
+  const toLeft = d => ((new Date(d).getTime() - rangeStart.getTime()) / totalMs * 100);
+  const toWidth = (d1, d2) => Math.max(0.3, (new Date(d2).getTime() - new Date(d1).getTime()) / totalMs * 100);
+
+  // Sort projects by fechaInicio
+  prons.sort((a, b) => new Date(a.fechaInicio) - new Date(b.fechaInicio));
+
+  let thead = '<tr><th class="gantt-label-col">Proyecto</th>';
+  let colWidths = [];
+  cols.forEach((c, i) => {
+    const isNewYear = i === 0 || cols[i - 1].start.getFullYear() !== c.start.getFullYear();
+    thead += `<th style="min-width:${ganttZoom === 'month' ? 42 : ganttZoom === 'quarter' ? 60 : 80}px" class="${isNewYear ? 'gantt-month-sep' : ''}">${c.label}</th>`;
+  });
+  thead += '</tr>';
+
+  let tbody = '';
+  prons.forEach(p => {
+    const lbl = `<span class="proj-id">${esc(p.proj)}</span> <span style="color:var(--text2)">${trunc(p.cuenta, 14)}</span>`;
+    tbody += `<tr><td class="gantt-label-cell" title="${esc(p.sitio)}">${lbl}</td>`;
+    tbody += `<td colspan="${cols.length}" style="position:relative;min-width:${cols.length * (ganttZoom === 'month' ? 42 : ganttZoom === 'quarter' ? 60 : 80)}px;">`;
+
+    // Today line
+    if (today >= rangeStart && today <= rangeEnd) {
+      tbody += `<div class="gantt-today" style="left:${toLeft(today)}%"></div>`;
+    }
+
+    // Phase bars (plan + real)
+    (p.fases || []).forEach(f => {
+      if (f.planInicio && f.planFin) {
+        tbody += `<div class="gantt-bar gantt-bar-plan" style="left:${toLeft(f.planInicio)}%;width:${toWidth(f.planInicio, f.planFin)}%;border-color:${f.color}55;" title="Plan: ${f.nombre}"></div>`;
+      }
+      if (f.fechaInicio && f.fechaFin) {
+        const opacity = f.estatus === 'cumplido' ? '0.8' : '0.55';
+        tbody += `<div class="gantt-bar" style="left:${toLeft(f.fechaInicio)}%;width:${toWidth(f.fechaInicio, f.fechaFin)}%;background:${f.color};opacity:${opacity};" data-gantt-tip="${esc(f.nombre)}: ${f.fechaInicio} → ${f.fechaFin}${f.estatus === 'cumplido' ? ' ✓' : ''}"></div>`;
+      }
+    });
+
+    // Milestone dots
+    (p.hitos || []).forEach(h => {
+      if (!h.fecha) return;
+      const col = h.estatus === 'Cumplido' ? '#00AA85' : h.estatus === 'Pendiente' ? '#4c9fff' : '#ff4757';
+      tbody += `<div class="gantt-bar gantt-bar-hito" style="left:${toLeft(h.fecha)}%;background:${col};" data-gantt-tip="${esc(h.nombre)}: ${h.fecha} (${h.estatus})"></div>`;
+    });
+
+    tbody += '</td></tr>';
+  });
+
+  container.innerHTML = `<table class="gantt-table"><thead>${thead}</thead><tbody>${tbody}</tbody></table>`;
+
+  // Tooltip logic
+  const tipEl = document.createElement('div'); tipEl.className = 'gantt-tooltip-box'; tipEl.style.display = 'none'; document.body.appendChild(tipEl);
+  container.addEventListener('mousemove', e => {
+    const bar = e.target.closest('[data-gantt-tip]');
+    if (bar) {
+      tipEl.innerHTML = bar.dataset.ganttTip;
+      tipEl.style.display = 'block';
+      tipEl.style.left = Math.min(e.clientX + 10, window.innerWidth - 290) + 'px';
+      tipEl.style.top = (e.clientY - 30) + 'px';
+    } else { tipEl.style.display = 'none'; }
+  });
+  container.addEventListener('mouseleave', () => { tipEl.style.display = 'none'; });
+}
+
+// ── SCATTER: Desviación vs % pronóstico ──
+function renderScatterCrono() {
+  const prons = filteredPronosticos;
+  const pts = prons.map(p => ({ x: (p.pctPronostico || 0) * 100, y: p.diasDesviacion || 0, r: Math.max(3, Math.min(12, (p.semanaActual || 0) / 5)), name: p.proj, cuenta: p.cuenta }));
+  destroyChart('chartScatterCrono');
+  charts.chartScatterCrono = new Chart(document.getElementById('chartScatterCrono'), {
+    type: 'bubble',
+    data: { datasets: [{ data: pts, backgroundColor: pts.map(p => p.y > 100 ? COLORS.danger + '77' : p.y > 30 ? COLORS.warn + '77' : COLORS.accent + '55'), borderColor: pts.map(p => p.y > 100 ? COLORS.danger : p.y > 30 ? COLORS.warn : COLORS.accent), borderWidth: 1.5 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => { const p = pts[ctx.dataIndex]; return `${p.name} (${p.cuenta}): ${p.y}d desv · ${p.x.toFixed(0)}% avance`; } } } },
+      scales: {
+        x: { title: { display: true, text: '% pronóstico', color: '#5a5858', font: { size: 9 } }, min: 0, max: 100, grid: { color: 'rgba(41,60,71,0.3)' }, ticks: { font: { size: 8 } } },
+        y: { title: { display: true, text: 'Días desviación', color: '#5a5858', font: { size: 9 } }, grid: { color: 'rgba(41,60,71,0.3)' }, ticks: { font: { size: 8 } } }
+      }
+    }
+  });
+}
+
+// ── SCATTER: Semanas esperadas vs reales ──
+function renderScatterSemanas() {
+  const prons = filteredPronosticos;
+  const maxW = Math.max(...prons.map(p => Math.max(p.semanasEsperadas || 0, p.semanaActual || 0)), 10);
+  const pts = prons.map(p => ({ x: p.semanasEsperadas || 0, y: p.semanaActual || 0, name: p.proj, cuenta: p.cuenta }));
+  destroyChart('chartScatterSemanas');
+  charts.chartScatterSemanas = new Chart(document.getElementById('chartScatterSemanas'), {
+    type: 'scatter',
+    data: {
+      datasets: [
+        { label: 'Proyectos', data: pts, backgroundColor: pts.map(p => p.y > p.x * 1.2 ? COLORS.danger + '88' : p.y > p.x ? COLORS.warn + '88' : COLORS.accent + '66'), borderColor: pts.map(p => p.y > p.x * 1.2 ? COLORS.danger : p.y > p.x ? COLORS.warn : COLORS.accent), borderWidth: 1.5, pointRadius: 5 },
+        { label: 'Sin desviación', data: [{ x: 0, y: 0 }, { x: maxW, y: maxW }], type: 'line', borderColor: 'rgba(130,128,128,0.3)', borderDash: [4, 3], borderWidth: 1, pointRadius: 0, fill: false }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { filter: ctx => ctx.datasetIndex === 0, callbacks: { label: ctx => { const p = pts[ctx.dataIndex]; return `${p.name} (${p.cuenta}): ${p.x} esp → ${p.y} real`; } } } },
+      scales: {
+        x: { title: { display: true, text: 'Semanas esperadas', color: '#5a5858', font: { size: 9 } }, beginAtZero: true, grid: { color: 'rgba(41,60,71,0.3)' }, ticks: { font: { size: 8 } } },
+        y: { title: { display: true, text: 'Semanas reales', color: '#5a5858', font: { size: 9 } }, beginAtZero: true, grid: { color: 'rgba(41,60,71,0.3)' }, ticks: { font: { size: 8 } } }
+      }
+    }
+  });
+}
+
+// ── FORECAST TABLE ──
+function renderForecastTable() {
+  let rows = [...filteredPronosticos];
+  document.getElementById('forecastTableCount').textContent = `(${rows.length})`;
+
+  if (forecastSortState.col) {
+    rows.sort((a, b) => {
+      let va = a[forecastSortState.col] ?? '', vb = b[forecastSortState.col] ?? '';
+      const na = parseFloat(va), nb = parseFloat(vb);
+      if (!isNaN(na) && !isNaN(nb)) return forecastSortState.asc ? na - nb : nb - na;
+      if (typeof va === 'string') va = va.toLowerCase();
+      if (typeof vb === 'string') vb = vb.toLowerCase();
+      return forecastSortState.asc ? (va < vb ? -1 : va > vb ? 1 : 0) : (va > vb ? -1 : va < vb ? 1 : 0);
+    });
+  }
+
+  const fmtDate = d => d ? new Date(d).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: '2-digit' }) : '—';
+  const desvClass = d => d > 0 ? 'desv-positive' : d < 0 ? 'desv-negative' : 'desv-zero';
+  const desvLabel = d => d > 0 ? '+' + d : d === 0 ? '0' : String(d);
+
+  document.getElementById('forecastTableBody').innerHTML = rows.map(p => {
+    const ic = p.checkInterconexion;
+    const icHtml = ic ? `<span class="intercon-check ${ic.check ? 'intercon-ok' : 'intercon-no'}">${ic.check ? '✓' : '✕'}</span>` : '—';
+    return `<tr>
+      <td><span class="proj-id">${esc(p.proj)}</span></td>
+      <td>${esc(p.cuenta)}</td>
+      <td>${trunc(p.pm, 16)}</td>
+      <td><span class="mini-badge" style="background:rgba(130,128,128,0.12);color:var(--text2);border:1px solid rgba(130,128,128,0.2);">${trunc(p.faseActual, 14)}</span></td>
+      <td><div class="progress-cell"><div class="mini-bar"><div class="mini-bar-fill" style="width:${(p.pctPronostico || 0) * 100}%"></div></div><span class="progress-pct">${((p.pctPronostico || 0) * 100).toFixed(0)}%</span></div></td>
+      <td>${fmtDate(p.fechaInicio)}</td>
+      <td>${fmtDate(p.fechaFin)}</td>
+      <td>${fmtDate(p.previstaCommissioning)}</td>
+      <td><span class="${desvClass(p.diasDesviacion)}">${desvLabel(p.diasDesviacion || 0)}</span></td>
+      <td>${p.semanasEsperadas || '—'}</td>
+      <td><span style="color:${(p.semanaActual || 0) > (p.semanasEsperadas || 0) ? 'var(--danger)' : 'var(--text)'};font-weight:${(p.semanaActual || 0) > (p.semanasEsperadas || 0) ? '600' : '400'}">${p.semanaActual || '—'}</span></td>
+      <td>${icHtml}</td>
+    </tr>`;
+  }).join('');
+
+  // Sort listeners
+  document.querySelectorAll('#forecastTable th[data-fsort]').forEach(th => {
+    th.onclick = () => {
+      const col = th.dataset.fsort;
+      if (forecastSortState.col === col) forecastSortState.asc = !forecastSortState.asc;
+      else { forecastSortState.col = col; forecastSortState.asc = true; }
+      renderForecastTable();
+    };
+  });
+}
+
+// Gantt search debounce
+document.addEventListener('DOMContentLoaded', () => {
+  let ganttTimer;
+  document.addEventListener('input', e => {
+    if (e.target.id === 'ganttSearch') { clearTimeout(ganttTimer); ganttTimer = setTimeout(renderGantt, 250); }
+  });
+});
 
 // ─── HELPERS ─────────────────────────────────
 function destroyChart(id){if(charts[id]){charts[id].destroy();charts[id]=null;}}
