@@ -1321,7 +1321,7 @@ function renderCronoKPIs() {
     { label: 'Desv. promedio', value: Math.round(avgDesv) + 'd', sub: avgDesv > 30 ? 'alto riesgo' : avgDesv > 15 ? 'moderado' : 'en control', cls: avgDesv > 30 ? 'c-danger' : avgDesv > 15 ? 'c-warn' : 'c-accent' },
     { label: '% Pron. prom.', value: (avgPct * 100).toFixed(0) + '%', sub: 'avance pronóstico', cls: 'c-accent' },
     { label: 'Interconexión', value: conInterc + '/' + (conInterc + sinInterc), sub: sinInterc + ' pendientes', cls: sinInterc > 0 ? 'c-warn' : 'c-accent' },
-    { label: 'Sobre plazo', value: overrun, sub: 'semanas reales > esperadas', cls: overrun > 0 ? 'c-danger' : 'c-accent' },
+    { label: 'Sobre plazo instalación', value: overrun, sub: 'semanas reales > esperadas', cls: overrun > 0 ? 'c-danger' : 'c-accent' },
   ];
   document.getElementById('cronoKpiGrid').innerHTML = cards.map((c, i) => `
     <div class="kpi-card ${c.cls} animate-in" style="animation-delay:${i * 0.03}s">
