@@ -1371,11 +1371,18 @@ function renderCronoCorte() {
   if (!el) return;
   const fc = rawData.fechaCortePronostico;
   if (fc) {
-    const d = new Date(fc);
+    // Parse DD/MM/YYYY or ISO
+    let d;
+    if (fc.includes('/')) {
+      const [dd, mm, yyyy] = fc.split('/');
+      d = new Date(yyyy, mm - 1, dd);
+    } else {
+      d = new Date(fc);
+    }
     el.textContent = d.toLocaleDateString('es-MX', { day: 'numeric', month: 'long', year: 'numeric' });
     el.style.color = 'var(--accent)';
   } else {
-    el.textContent = 'pendiente — agregar fechaCortePronostico en n8n';
+    el.textContent = 'pendiente';
     el.style.color = 'var(--warn)';
   }
 }
