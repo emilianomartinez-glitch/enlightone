@@ -80,6 +80,39 @@ header { padding:16px 28px 0; background:linear-gradient(180deg,rgba(0,170,133,0
 .filter-search:hover,.filter-search:focus { border-color:var(--accent); color:var(--text); outline:none; }
 .filter-search::placeholder { color:var(--text3); }
 
+/* ── MULTI-SELECT DROPDOWN ─────── */
+.ms-dropdown { position:relative; display:inline-block; }
+.ms-toggle { font-family:var(--font-body); font-size:10px; color:var(--text2); background:var(--surface); border:1px solid var(--border); padding:5px 24px 5px 10px; cursor:pointer; min-width:120px; transition:border-color .2s; border-radius:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block; user-select:none; }
+.ms-toggle:hover,.ms-toggle.open { border-color:var(--accent); color:var(--text); }
+.ms-toggle::after { content:'▾'; position:absolute; right:8px; top:50%; transform:translateY(-50%); font-size:7px; color:var(--text3); pointer-events:none; }
+.ms-toggle.has-selection { color:var(--accent); border-color:rgba(0,170,133,0.4); }
+.ms-panel { display:none; position:absolute; top:100%; left:0; z-index:100; background:var(--surface2); border:1px solid var(--border); border-radius:2px; min-width:180px; max-height:220px; overflow-y:auto; box-shadow:0 8px 24px rgba(0,0,0,0.5); margin-top:2px; }
+.ms-panel.open { display:block; }
+.ms-panel label { display:flex; align-items:center; gap:6px; padding:4px 10px; font-size:10px; color:var(--text2); cursor:pointer; transition:background .15s; white-space:nowrap; }
+.ms-panel label:hover { background:rgba(0,170,133,0.08); color:var(--text); }
+.ms-panel input[type="checkbox"] { accent-color:var(--accent); width:12px; height:12px; cursor:pointer; }
+
+/* ── DATA QUALITY TOOLTIP ──────── */
+.dq-tooltip-trigger { cursor:help; position:relative; }
+.dq-tooltip { display:none; position:absolute; left:0; top:100%; z-index:200; background:var(--surface2); border:1px solid var(--border); border-radius:3px; padding:10px 14px; min-width:280px; max-width:420px; max-height:260px; overflow-y:auto; box-shadow:0 8px 24px rgba(0,0,0,0.6); margin-top:4px; font-size:10px; line-height:1.8; }
+.dq-tooltip.visible { display:block; animation:fadeUp .2s ease both; }
+.dq-tooltip-item { display:flex; justify-content:space-between; gap:12px; border-bottom:1px solid rgba(41,60,71,0.2); padding:2px 0; }
+.dq-tooltip-item:last-child { border-bottom:none; }
+
+/* ── SALUD FILTER TOGGLE ───────── */
+.exec-card.clickable-card { cursor:pointer; transition:all .2s; }
+.exec-card.clickable-card:hover { border-color:var(--accent); transform:translateY(-1px); box-shadow:0 4px 12px rgba(0,0,0,0.3); }
+.exec-card.salud-active { border-color:var(--accent) !important; box-shadow:0 0 0 1px var(--accent), 0 4px 12px rgba(0,170,133,0.15); }
+
+/* ── EXPANDABLE CUENTA ROWS ───── */
+.cuenta-expand-icon { display:inline-block; width:14px; font-size:8px; color:var(--text3); transition:transform .2s; }
+.cuenta-row-parent { cursor:pointer; }
+.cuenta-row-parent:hover td { background:rgba(0,170,133,0.05); }
+.cuenta-row-parent.expanded td { background:rgba(0,170,133,0.04); border-bottom-color:transparent; }
+.cuenta-child-row td { background:var(--surface2) !important; font-size:9px; padding:4px 10px !important; }
+.cuenta-child-row:last-child td { border-bottom:1px solid var(--border); }
+.comment-cell { white-space:normal !important; max-width:200px; word-wrap:break-word; line-height:1.4; }
+
 .chart-filter-chip {
   display:inline-flex; align-items:center; gap:5px;
   font-family:var(--font-body); font-size:9px; letter-spacing:1px;
@@ -479,9 +512,10 @@ footer { padding:10px 28px; border-top:1px solid var(--border); display:flex; ju
       <div class="section-label">Detalle por Cuenta</div>
       <div class="table-card">
         <div class="table-header"><div class="table-title">Resumen por Cuenta</div></div>
-        <div class="table-scroll" style="max-height:300px;">
+        <div class="table-scroll" style="max-height:420px;">
           <table class="data-table" id="cuentaTable">
             <thead><tr>
+              <th style="width:18px;"></th>
               <th>Cuenta</th><th class="sortable-cta" data-sort="n">Proyectos <span class="sort-arrow"></span></th><th>Evaluados</th>
               <th class="sortable-cta" data-sort="at">A tiempo <span class="sort-arrow"></span></th><th class="sortable-cta" data-sort="cr">Retraso <span class="sort-arrow"></span></th><th class="sortable-cta" data-sort="atr">Atrasados <span class="sort-arrow"></span></th>
               <th>Pend.</th><th class="sortable-cta" data-sort="pct">% A tiempo <span class="sort-arrow"></span></th><th class="sortable-cta" data-sort="spi">SPI <span class="sort-arrow"></span></th>
@@ -587,6 +621,9 @@ let kpiFilter = null; // 'atrasados' | 'conRetraso' | 'pendientes' | 'aTiempo' |
 let treemapActiveFase = null; // fase selected in treemap for detail table
 let cuentaSortState = { col: null, asc: true };
 let faseSortState = { col: null, asc: true };
+let saludFilter = false; // toggle: show only projects with hitos atrasados
+let expandedCuentas = new Set(); // expanded cuenta rows in Tab 2
+let multiSelectState = {}; // { key: Set([values]) } for multi-select filters
 
 function toggleKpiFilter(key) {
   kpiFilter = (kpiFilter === key) ? null : key;
@@ -663,67 +700,125 @@ async function fetchData() {
   finally { btn.classList.remove('loading'); btn.textContent='↻ Actualizar'; document.getElementById('loadingOverlay').classList.add('hidden'); }
 }
 
-// ─── FILTERS ─────────────────────────────────
+// ─── FILTERS — Multi-select bidireccional ─────────────────────
 function buildFilters() {
   const defs = [
-    {key:'proj',label:'PROJ',values:rawData.filtros.projs||[]},
-    {key:'sitio',label:'Sitio',values:rawData.filtros.sitios||[],searchable:true},
-    {key:'pm',label:'Project Manager',values:rawData.filtros.pms},
-    {key:'cuenta',label:'Cuenta',values:rawData.filtros.cuentas},
-    {key:'tipo',label:'Tipo',values:rawData.filtros.tipos},
-    {key:'faseActual',label:'Fase',values:rawData.filtros.fases},
-    {key:'tipoProv',label:'Proveeduría',values:rawData.filtros.proveedurias||[]},
-    {key:'supervisor',label:'Supervisor',values:rawData.filtros.supervisores||[]},
-    {key:'entidadFed',label:'Entidad',values:rawData.filtros.entidades||[]},
+    {key:'proj',label:'PROJ',src:'projs'},
+    {key:'kam',label:'KAM',src:'kams'},
+    {key:'sitio',label:'Sitio',src:'sitios',searchable:true},
+    {key:'pm',label:'Project Manager',src:'pms'},
+    {key:'cuenta',label:'Cuenta',src:'cuentas'},
+    {key:'tipo',label:'Tipo',src:'tipos'},
+    {key:'faseActual',label:'Fase',src:'fases'},
+    {key:'tipoProv',label:'Proveeduría',src:'proveedurias'},
+    {key:'supervisor',label:'Supervisor',src:'supervisores'},
+    {key:'entidadFed',label:'Entidad',src:'entidades'},
   ];
-['filtersBar','filtersBar2','filtersBar3'].forEach(barId => {
-  const bar = document.getElementById(barId);
+  // Initialize multiSelectState for each key if not already set
+  defs.forEach(f => { if (!multiSelectState[f.key]) multiSelectState[f.key] = new Set(); });
+
+  ['filtersBar','filtersBar2','filtersBar3'].forEach(barId => {
+    const bar = document.getElementById(barId);
     if (!bar) return;
     bar.innerHTML = '';
     defs.forEach(f => {
-      if(!f.values?.length) return;
+      const allValues = rawData.filtros[f.src] || [];
+      if (!allValues.length) return;
+      // Get available values based on current filtered data (bidirectional)
+      const available = getAvailableValues(f.key);
+
       if (f.searchable) {
-        // Searchable input with datalist
-        const wrap=document.createElement('div'); wrap.className='filter-search-wrap';
-        const inp=document.createElement('input'); inp.className='filter-search'; inp.type='text';
-        inp.placeholder=f.label; inp.dataset.filterKey=f.key;
-        inp.setAttribute('list','dl_'+barId+'_'+f.key); inp.autocomplete='off';
-        const dl=document.createElement('datalist'); dl.id='dl_'+barId+'_'+f.key;
-        dl.innerHTML=f.values.map(v=>`<option value="${v}">`).join('');
-        inp.addEventListener('input',()=>{
-          const val=inp.value;
-          const match=f.values.find(v=>v===val);
-          if(match||val===''){syncFilters(barId,f.key,val);chartFilter=null;chartFilterSource=null;kpiFilter=null;applyFilters();}
+        const wrap = document.createElement('div'); wrap.className = 'filter-search-wrap';
+        const inp = document.createElement('input'); inp.className = 'filter-search'; inp.type = 'text';
+        inp.placeholder = f.label; inp.dataset.filterKey = f.key;
+        inp.setAttribute('list', 'dl_' + barId + '_' + f.key); inp.autocomplete = 'off';
+        const currentSitio = multiSelectState[f.key].size === 1 ? [...multiSelectState[f.key]][0] : '';
+        inp.value = currentSitio;
+        const dl = document.createElement('datalist'); dl.id = 'dl_' + barId + '_' + f.key;
+        dl.innerHTML = available.map(v => `<option value="${v}">`).join('');
+        inp.addEventListener('input', () => {
+          const val = inp.value;
+          const match = allValues.find(v => v === val);
+          if (match) { multiSelectState[f.key] = new Set([match]); }
+          else if (val === '') { multiSelectState[f.key] = new Set(); }
+          else return; // don't trigger until match or clear
+          chartFilter = null; chartFilterSource = null; kpiFilter = null;
+          applyFilters();
         });
-        inp.addEventListener('change',()=>{
-          const val=inp.value;
-          if(!f.values.includes(val)&&val!==''){inp.value='';syncFilters(barId,f.key,'');chartFilter=null;chartFilterSource=null;kpiFilter=null;applyFilters();}
+        inp.addEventListener('change', () => {
+          const val = inp.value;
+          if (!allValues.includes(val) && val !== '') { inp.value = ''; multiSelectState[f.key] = new Set(); chartFilter = null; chartFilterSource = null; kpiFilter = null; applyFilters(); }
         });
         wrap.appendChild(inp); wrap.appendChild(dl); bar.appendChild(wrap);
       } else {
-        const g=document.createElement('div'); g.className='filter-group';
-        const s=document.createElement('select'); s.className='filter-select'; s.dataset.filterKey=f.key;
-        s.innerHTML=`<option value="">${f.label}</option>`+f.values.map(v=>`<option value="${v}">${v}</option>`).join('');
-        s.addEventListener('change',()=>{syncFilters(barId,f.key,s.value);chartFilter=null;chartFilterSource=null;kpiFilter=null;applyFilters();});
-        g.appendChild(s); bar.appendChild(g);
+        // Multi-select dropdown with checkboxes
+        const dd = document.createElement('div'); dd.className = 'ms-dropdown';
+        const toggle = document.createElement('div'); toggle.className = 'ms-toggle';
+        toggle.dataset.filterKey = f.key;
+        const selected = multiSelectState[f.key];
+        if (selected.size === 0) { toggle.textContent = f.label; }
+        else if (selected.size === 1) { toggle.textContent = [...selected][0]; toggle.classList.add('has-selection'); }
+        else { toggle.textContent = f.label + ' (' + selected.size + ')'; toggle.classList.add('has-selection'); }
+
+        const panel = document.createElement('div'); panel.className = 'ms-panel';
+        available.forEach(v => {
+          const lbl = document.createElement('label');
+          const cb = document.createElement('input'); cb.type = 'checkbox'; cb.value = v;
+          cb.checked = selected.has(v);
+          cb.addEventListener('change', () => {
+            if (cb.checked) multiSelectState[f.key].add(v);
+            else multiSelectState[f.key].delete(v);
+            chartFilter = null; chartFilterSource = null; kpiFilter = null;
+            applyFilters();
+          });
+          lbl.appendChild(cb); lbl.appendChild(document.createTextNode(v));
+          panel.appendChild(lbl);
+        });
+
+        toggle.addEventListener('click', (e) => {
+          e.stopPropagation();
+          // Close other panels
+          document.querySelectorAll('.ms-panel.open').forEach(p => { if (p !== panel) p.classList.remove('open'); });
+          document.querySelectorAll('.ms-toggle.open').forEach(t => { if (t !== toggle) t.classList.remove('open'); });
+          panel.classList.toggle('open');
+          toggle.classList.toggle('open');
+        });
+
+        dd.appendChild(toggle); dd.appendChild(panel); bar.appendChild(dd);
       }
     });
-    if (barId==='filtersBar') { const cfSpan=document.createElement('span'); cfSpan.id='chartFilterChip'; bar.appendChild(cfSpan); }
-    const rb=document.createElement('button'); rb.className='filter-reset'; rb.textContent='✕ Limpiar';
-    rb.addEventListener('click',()=>{document.querySelectorAll('.filter-select').forEach(s=>s.value='');document.querySelectorAll('.filter-search').forEach(s=>s.value='');chartFilter=null;chartFilterSource=null;kpiFilter=null;applyFilters();});
+    if (barId === 'filtersBar') { const cfSpan = document.createElement('span'); cfSpan.id = 'chartFilterChip'; bar.appendChild(cfSpan); }
+    const rb = document.createElement('button'); rb.className = 'filter-reset'; rb.textContent = '✕ Limpiar';
+    rb.addEventListener('click', () => {
+      Object.keys(multiSelectState).forEach(k => multiSelectState[k] = new Set());
+      chartFilter = null; chartFilterSource = null; kpiFilter = null; saludFilter = false;
+      applyFilters();
+    });
     bar.appendChild(rb);
   });
   renderChartFilterChip();
 }
 
-function syncFilters(sourceBarId, key, value) {
-  ['filtersBar','filtersBar2','filtersBar3'].forEach(barId => {
-    if (barId === sourceBarId) return;
-    const bar = document.getElementById(barId);
-    if (!bar) return;
-    bar.querySelectorAll('.filter-select').forEach(s => { if (s.dataset.filterKey === key) s.value = value; });
-    bar.querySelectorAll('.filter-search').forEach(s => { if (s.dataset.filterKey === key) s.value = value; });
+// Close dropdowns on click outside
+document.addEventListener('click', () => {
+  document.querySelectorAll('.ms-panel.open').forEach(p => p.classList.remove('open'));
+  document.querySelectorAll('.ms-toggle.open').forEach(t => t.classList.remove('open'));
+});
+
+// Get available values for a filter key based on current selections (excluding that key)
+function getAvailableValues(excludeKey) {
+  let subset = rawData.proyectos;
+  Object.entries(multiSelectState).forEach(([key, vals]) => {
+    if (key === excludeKey || vals.size === 0) return;
+    subset = subset.filter(p => vals.has(p[key]));
   });
+  // Also apply chartFilter and kpiFilter and saludFilter
+  if (chartFilter && chartFilter.key !== excludeKey) {
+    subset = subset.filter(p => p[chartFilter.key] === chartFilter.value);
+  }
+  if (kpiFilter) subset = subset.filter(p => p.conteos[kpiFilter] > 0);
+  if (saludFilter) subset = subset.filter(p => p.conteos.atrasados > 0);
+  return [...new Set(subset.map(p => p[excludeKey]).filter(Boolean))].sort();
 }
 
 function renderChartFilterChip() {
@@ -731,12 +826,15 @@ function renderChartFilterChip() {
   if (!el) return;
   let html = '';
   if (chartFilter) {
-    const labels = {faseActual:'Fase',pm:'PM',cuenta:'Cuenta',supervisor:'Supervisor',entidadFed:'Entidad',tipoProv:'Proveeduría',tipo:'Tipo',proj:'PROJ',sitio:'Sitio'};
+    const labels = {faseActual:'Fase',pm:'PM',cuenta:'Cuenta',supervisor:'Supervisor',entidadFed:'Entidad',tipoProv:'Proveeduría',tipo:'Tipo',proj:'PROJ',sitio:'Sitio',kam:'KAM'};
     html += `<span class="chart-filter-chip" onclick="clearChartFilter()">${labels[chartFilter.key]||chartFilter.key}: ${chartFilter.value} <span class="x">✕</span></span> `;
   }
   if (kpiFilter) {
     const kpiLabels = {atrasados:'Atrasados',conRetraso:'Con retraso',pendientes:'Pendientes',aTiempo:'A tiempo'};
     html += `<span class="chart-filter-chip" onclick="kpiFilter=null;applyFilters();">Hitos: ${kpiLabels[kpiFilter]} <span class="x">✕</span></span>`;
+  }
+  if (saludFilter) {
+    html += `<span class="chart-filter-chip" onclick="saludFilter=false;applyFilters();">Salud: Solo atrasados <span class="x">✕</span></span>`;
   }
   el.innerHTML = html;
 }
@@ -747,7 +845,6 @@ function clearChartFilter() {
 }
 
 function setChartFilter(key, value, sourceChartId) {
-  // Toggle: if same filter is already active, clear it
   if (chartFilter && chartFilter.key === key && chartFilter.value === value) {
     chartFilter = null; chartFilterSource = null;
   } else {
@@ -758,20 +855,24 @@ function setChartFilter(key, value, sourceChartId) {
 }
 
 function applyFilters() {
-  const filters={};
-  // Deduplicate: both bars have same keys, just take unique values
-  const seen={};
-  document.querySelectorAll('.filter-select').forEach(s=>{if(s.value && !seen[s.dataset.filterKey]){filters[s.dataset.filterKey]=s.value;seen[s.dataset.filterKey]=true;}});
-  document.querySelectorAll('.filter-search').forEach(s=>{if(s.value && !seen[s.dataset.filterKey]){filters[s.dataset.filterKey]=s.value;seen[s.dataset.filterKey]=true;}});
-  // Combine dropdown filters + chart filter
-  if (chartFilter) filters[chartFilter.key] = chartFilter.value;
-  filteredProyectos=rawData.proyectos.filter(p=>Object.entries(filters).every(([k,v])=>p[k]===v));
-  // KPI filter: show only projects that have >0 of that status
-  if (kpiFilter) {
-    filteredProyectos = filteredProyectos.filter(p => p.conteos[kpiFilter] > 0);
-  }
-  renderChartFilterChip();
+  filteredProyectos = rawData.proyectos.filter(p => {
+    // Multi-select filters
+    for (const [key, vals] of Object.entries(multiSelectState)) {
+      if (vals.size > 0 && !vals.has(p[key])) return false;
+    }
+    // Chart filter
+    if (chartFilter && p[chartFilter.key] !== chartFilter.value) return false;
+    // KPI filter
+    if (kpiFilter && p.conteos[kpiFilter] <= 0) return false;
+    // Salud filter
+    if (saludFilter && p.conteos.atrasados <= 0) return false;
+    return true;
+  });
+
+  // Rebuild filters to update available options (bidirectional)
+  buildFilters();
   renderAll();
+
   // Highlight active KPI card
   document.querySelectorAll('.kpi-clickable').forEach(el => el.classList.remove('active-filter'));
   if (kpiFilter) {
@@ -814,21 +915,48 @@ function renderAll() {
 
 }
 
-// ─── ALERT BANNER — Calidad de datos ─────────
+// ─── ALERT BANNER — Calidad de datos con tooltip ─────────
 function renderAlertBanner() {
   const p = filteredProyectos;
   const el = document.getElementById('alertBanner');
   if (!p.length) { el.innerHTML = ''; return; }
 
-  const sinFechas = p.filter(x => x.conteos.total === 0).length;
-  const sinPotencia = p.filter(x => !x.potenciaFV && !x.potenciaSTO && !x.capacidadSTO).length;
+  const sinFechasProjects = p.filter(x => x.conteos.total === 0);
+  const sinPotenciaProjects = p.filter(x => !x.potenciaFV && !x.potenciaSTO && !x.capacidadSTO);
 
   let parts = [];
-  if (sinFechas > 0) parts.push(`<span class="hl-warn">${sinFechas}</span> sin fechas registradas`);
-  if (sinPotencia > 0) parts.push(`<span class="hl-warn">${sinPotencia}</span> sin potencia/capacidad`);
+  if (sinFechasProjects.length > 0) parts.push(`<span class="hl-warn">${sinFechasProjects.length}</span> sin fechas registradas`);
+  if (sinPotenciaProjects.length > 0) parts.push(`<span class="hl-warn">${sinPotenciaProjects.length}</span> sin potencia/capacidad`);
 
   if (parts.length > 0) {
-    el.innerHTML = `<div class="alert-card"><div class="alert-title" style="color:var(--warn)"><span class="dot" style="background:var(--warn)"></span>Calidad de datos</div><div class="alert-body">${parts.join(' · ')} — <span class="hl-muted">estos proyectos pueden no participar en métricas de rendimiento</span></div></div>`;
+    // Build tooltip content
+    const affected = [...new Map([...sinFechasProjects, ...sinPotenciaProjects].map(x => [x.proj, x])).values()];
+    const tooltipRows = affected.map(x =>
+      `<div class="dq-tooltip-item"><span style="color:var(--accent);font-weight:600;">${esc(x.proj)}</span><span style="color:var(--text2);">${trunc(x.pm, 22) || '—'}</span></div>`
+    ).join('');
+
+    el.innerHTML = `<div class="alert-card dq-tooltip-trigger" tabindex="0" role="button" aria-describedby="dqTooltip">
+      <div class="alert-title" style="color:var(--warn)"><span class="dot" style="background:var(--warn)"></span>Calidad de datos</div>
+      <div class="alert-body">${parts.join(' · ')} — <span class="hl-muted">estos proyectos pueden no participar en métricas de rendimiento</span></div>
+      <div class="dq-tooltip" id="dqTooltip" role="tooltip">
+        <div style="font-family:var(--font-display);font-weight:700;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--text2);margin-bottom:6px;">Proyectos afectados (${affected.length})</div>
+        <div style="display:flex;justify-content:space-between;gap:12px;margin-bottom:4px;border-bottom:1px solid var(--border);padding-bottom:3px;">
+          <span style="font-size:8px;letter-spacing:1px;color:var(--text3);text-transform:uppercase;">PROJ</span>
+          <span style="font-size:8px;letter-spacing:1px;color:var(--text3);text-transform:uppercase;">PM</span>
+        </div>
+        ${tooltipRows}
+      </div>
+    </div>`;
+
+    // Bind hover + keyboard events
+    const trigger = el.querySelector('.dq-tooltip-trigger');
+    const tooltip = el.querySelector('.dq-tooltip');
+    if (trigger && tooltip) {
+      trigger.addEventListener('mouseenter', () => tooltip.classList.add('visible'));
+      trigger.addEventListener('mouseleave', () => tooltip.classList.remove('visible'));
+      trigger.addEventListener('focus', () => tooltip.classList.add('visible'));
+      trigger.addEventListener('blur', () => tooltip.classList.remove('visible'));
+    }
   } else {
     el.innerHTML = '';
   }
@@ -872,8 +1000,8 @@ function renderExecSummary() {
   if (sinFechas > 0) completionLines.push(`<span class="muted">${sinFechas} proyecto${sinFechas>1?'s':''} sin fechas registradas.</span>`);
 
   document.getElementById('execSummary').innerHTML = `
-    <div class="exec-card">
-      <div class="exec-card-title"><span class="dot" style="${spiDot}"></span>Salud del portafolio</div>
+    <div class="exec-card clickable-card${saludFilter ? ' salud-active' : ''}" onclick="toggleSaludFilter()" title="Click para filtrar solo proyectos con hitos atrasados">
+      <div class="exec-card-title"><span class="dot" style="${spiDot}"></span>Salud del portafolio${saludFilter ? ' <span style="font-size:7px;color:var(--accent);font-weight:400;letter-spacing:0;">(filtro activo)</span>' : ''}</div>
       <div class="exec-body">${spiText}<br>${alertLines.join('<br>')}</div>
     </div>
     <div class="exec-card">
@@ -889,6 +1017,11 @@ function renderExecSummary() {
       </div>
     </div>
   `;
+}
+
+function toggleSaludFilter() {
+  saludFilter = !saludFilter;
+  applyFilters();
 }
 
 // ─── KPIs TAB 1 ──────────────────────────────
@@ -1150,7 +1283,7 @@ function renderKPIs2(){
   const crit=rawData.proyectoCritico;
   const cards=[
     {label:'% Hitos a tiempo',value:pctAT+'%',sub:`${totalAT} de ${totalH}`,cls:'c-accent'},
-    {label:'Desv. promedio',value:avgD+' d',sub:'días promedio',cls:'c-warn'},
+    {label:'Desv. promedio vs. fecha base',value:avgD+' d',sub:'días promedio',cls:'c-warn'},
     {label:'Proyecto crítico',value:crit?crit.proj:'—',sub:crit?`${crit.conteos.atrasados} atr · ${trunc(crit.sitio,18)}`:'',cls:'c-danger'},
     {label:'Hitos evaluados',value:totalH,sub:'portafolio total',cls:'c-neutral'},
   ];
@@ -1257,7 +1390,7 @@ function renderChartCuentaRendimiento(){
 
 function renderCuentaTable(){
   const cta={};
-  filteredProyectos.forEach(p=>{if(!p.cuenta)return;if(!cta[p.cuenta])cta[p.cuenta]={n:0,at:0,cr:0,atr:0,pend:0,tot:0};cta[p.cuenta].n++;cta[p.cuenta].at+=p.conteos.aTiempo;cta[p.cuenta].cr+=p.conteos.conRetraso;cta[p.cuenta].atr+=p.conteos.atrasados;cta[p.cuenta].pend+=p.conteos.pendientes;cta[p.cuenta].tot+=p.conteos.total;});
+  filteredProyectos.forEach(p=>{if(!p.cuenta)return;if(!cta[p.cuenta])cta[p.cuenta]={n:0,at:0,cr:0,atr:0,pend:0,tot:0,projects:[]};cta[p.cuenta].n++;cta[p.cuenta].at+=p.conteos.aTiempo;cta[p.cuenta].cr+=p.conteos.conRetraso;cta[p.cuenta].atr+=p.conteos.atrasados;cta[p.cuenta].pend+=p.conteos.pendientes;cta[p.cuenta].tot+=p.conteos.total;cta[p.cuenta].projects.push(p);});
   let entries=Object.entries(cta).map(([name,s])=>{
     const pct=s.tot?+((s.at/s.tot)*100).toFixed(1):0;
     const spi=calcSPI({aTiempo:s.at,conRetraso:s.cr,atrasados:s.atr});
@@ -1274,9 +1407,23 @@ function renderCuentaTable(){
   } else {
     entries.sort((a,b)=>b[1].atr-a[1].atr);
   }
-  document.getElementById('cuentaTableBody').innerHTML=entries.map(([name,s])=>{
+
+  // Build desviaciones lookup: first comment/area per project
+  const desvLookup = {};
+  if (rawData.desviaciones) {
+    rawData.desviaciones.forEach(d => {
+      if (!d.proj || desvLookup[d.proj]) return;
+      desvLookup[d.proj] = { comentario: d.comentariosRetraso || '', area: d.areaResponsable || '' };
+    });
+  }
+
+  let html = '';
+  entries.forEach(([name,s]) => {
     const spiStr=s.spi!==null?s.spi.toFixed(2):'—';
-    return `<tr>
+    const isExpanded = expandedCuentas.has(name);
+    const arrow = isExpanded ? '▾' : '▸';
+    html += `<tr class="cuenta-row-parent${isExpanded?' expanded':''}" onclick="toggleCuentaExpand('${esc(name).replace(/'/g,"\\'")}')">
+      <td><span class="cuenta-expand-icon">${arrow}</span></td>
       <td style="font-weight:500;color:var(--accent)">${esc(name)}</td>
       <td>${s.n}</td><td>${s.tot}</td>
       <td><span class="mini-badge badge-accent">${s.at}</span></td>
@@ -1286,11 +1433,52 @@ function renderCuentaTable(){
       <td><div class="progress-cell"><div class="mini-bar"><div class="mini-bar-fill" style="width:${s.pct}%"></div></div><span class="progress-pct">${s.pct}%</span></div></td>
       <td><span class="spi-indicator"><span class="spi-dot ${spiClass(s.spi)}"></span>${spiStr}</span></td>
     </tr>`;
-  }).join('');
+
+    if (isExpanded) {
+      // Child header row
+      html += `<tr class="cuenta-child-row"><td></td><td colspan="9" style="padding:0 !important;">
+        <table style="width:100%;border-collapse:collapse;font-size:9px;">
+          <thead><tr style="background:var(--surface);">
+            <th style="padding:4px 8px;text-align:left;font-size:7px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);font-weight:600;">PROJ</th>
+            <th style="padding:4px 8px;text-align:left;font-size:7px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);font-weight:600;">Sitio</th>
+            <th style="padding:4px 8px;text-align:left;font-size:7px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);font-weight:600;">PM</th>
+            <th style="padding:4px 8px;text-align:left;font-size:7px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);font-weight:600;">KAM</th>
+            <th style="padding:4px 8px;text-align:left;font-size:7px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);font-weight:600;">SPI</th>
+            <th style="padding:4px 8px;text-align:left;font-size:7px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);font-weight:600;">Atr</th>
+            <th style="padding:4px 8px;text-align:left;font-size:7px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);font-weight:600;">Ret</th>
+            <th style="padding:4px 8px;text-align:left;font-size:7px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);font-weight:600;">OK</th>
+            <th style="padding:4px 8px;text-align:left;font-size:7px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);font-weight:600;">Comentarios de Retraso</th>
+            <th style="padding:4px 8px;text-align:left;font-size:7px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);font-weight:600;">Área Resp.</th>
+          </tr></thead><tbody>`;
+
+      s.projects.forEach(p => {
+        const pSpi = calcSPI(p.conteos);
+        const pSpiStr = pSpi !== null ? pSpi.toFixed(2) : '—';
+        const dv = desvLookup[p.proj] || {};
+        html += `<tr style="border-bottom:1px solid rgba(41,60,71,0.15);">
+          <td style="padding:4px 8px;"><span class="proj-id" style="font-size:9px;">${esc(p.proj)}</span></td>
+          <td style="padding:4px 8px;color:var(--text2);">${trunc(p.sitio, 22)}</td>
+          <td style="padding:4px 8px;color:var(--text2);">${trunc(p.pm, 16)}</td>
+          <td style="padding:4px 8px;color:var(--text2);">${trunc(p.kam || '—', 14)}</td>
+          <td style="padding:4px 8px;"><span class="spi-indicator"><span class="spi-dot ${spiClass(pSpi)}"></span>${pSpiStr}</span></td>
+          <td style="padding:4px 8px;"><span class="mini-badge badge-danger">${p.conteos.atrasados}</span></td>
+          <td style="padding:4px 8px;"><span class="mini-badge badge-warn">${p.conteos.conRetraso}</span></td>
+          <td style="padding:4px 8px;"><span class="mini-badge badge-accent">${p.conteos.aTiempo}</span></td>
+          <td style="padding:4px 8px;color:var(--text2);" class="comment-cell">${esc(dv.comentario) || '<span style="color:var(--text3);">—</span>'}</td>
+          <td style="padding:4px 8px;"><span class="mini-badge" style="background:rgba(61,125,128,0.12);color:var(--teal);border:1px solid rgba(61,125,128,0.2);">${esc(dv.area) || '—'}</span></td>
+        </tr>`;
+      });
+      html += `</tbody></table></td></tr>`;
+    }
+  });
+
+  document.getElementById('cuentaTableBody').innerHTML = html;
+
   // Bind sort listeners
   document.querySelectorAll('.sortable-cta').forEach(th=>{
     th.style.cursor='pointer';
-    th.onclick=()=>{
+    th.onclick=(e)=>{
+      e.stopPropagation();
       const col=th.dataset.sort;
       if(cuentaSortState.col===col)cuentaSortState.asc=!cuentaSortState.asc;
       else{cuentaSortState.col=col;cuentaSortState.asc=false;}
@@ -1299,6 +1487,12 @@ function renderCuentaTable(){
       renderCuentaTable();
     };
   });
+}
+
+function toggleCuentaExpand(cuenta) {
+  if (expandedCuentas.has(cuenta)) expandedCuentas.delete(cuenta);
+  else expandedCuentas.add(cuenta);
+  renderCuentaTable();
 }
 
   // ═══════════════════════════════════════════════════════════
@@ -1337,16 +1531,15 @@ function setGanttSort(s) {
 
 function getFilteredPronosticos() {
   const prons = rawData.pronosticos || [];
-  const filters = {};
-  const seen = {};
-  document.querySelectorAll('.filter-select').forEach(s => {
-    if (s.value && !seen[s.dataset.filterKey]) { filters[s.dataset.filterKey] = s.value; seen[s.dataset.filterKey] = true; }
+  filteredPronosticos = prons.filter(p => {
+    // Multi-select filters
+    for (const [key, vals] of Object.entries(multiSelectState)) {
+      if (vals.size > 0 && !vals.has(p[key])) return false;
+    }
+    // Chart filter
+    if (chartFilter && p[chartFilter.key] !== chartFilter.value) return false;
+    return true;
   });
-  document.querySelectorAll('.filter-search').forEach(s => {
-    if (s.value && !seen[s.dataset.filterKey]) { filters[s.dataset.filterKey] = s.value; seen[s.dataset.filterKey] = true; }
-  });
-  if (chartFilter) filters[chartFilter.key] = chartFilter.value;
-  filteredPronosticos = prons.filter(p => Object.entries(filters).every(([k, v]) => p[k] === v));
   return filteredPronosticos;
 }
 
@@ -1401,7 +1594,7 @@ function renderCronoKPIs() {
 
   const cards = [
     { label: 'Proyectos', value: prons.length, sub: 'con pronóstico', cls: 'c-neutral' },
-    { label: 'Desv. promedio', value: Math.round(avgDesv) + 'd', sub: criticos + ' críticos (>90d)', cls: avgDesv > 90 ? 'c-danger' : avgDesv > 30 ? 'c-warn' : 'c-accent' },
+    { label: 'Desv. Comm. vs. fecha base', value: Math.round(avgDesv) + 'd', sub: criticos + ' críticos (>90d)', cls: avgDesv > 90 ? 'c-danger' : avgDesv > 30 ? 'c-warn' : 'c-accent' },
     { label: '% Pron. prom.', value: (avgPct * 100).toFixed(0) + '%', sub: 'avance pronóstico', cls: 'c-accent' },
     { label: 'Interconexión', value: conInterc + '/' + (conInterc + sinInterc), sub: sinInterc + ' pendientes', cls: sinInterc > 0 ? 'c-warn' : 'c-accent' },
     { label: 'Sobre plazo', value: overrun, sub: 'sem. reales > esperadas', cls: overrun > 0 ? 'c-danger' : 'c-accent' },
@@ -1767,7 +1960,8 @@ function generateDemoData(){
     sitios:[...new Set(proyectos.map(p=>p.sitio))].sort(),
     pms:[...new Set(proyectos.map(p=>p.pm))].sort(),cuentas:[...new Set(proyectos.map(p=>p.cuenta))].sort(),tipos:[...new Set(proyectos.map(p=>p.tipo))].sort(),fases:[...new Set(proyectos.map(p=>p.faseActual))].sort(),supervisores:[...new Set(proyectos.map(p=>p.supervisor))].sort(),entidades:[...new Set(proyectos.map(p=>p.entidadFed))].sort(),
     proveedurias:ProvTypes.sort(),
-    tecnologias:[...new Set(proyectos.map(p=>p.tecnologia))].sort()
+    tecnologias:[...new Set(proyectos.map(p=>p.tecnologia))].sort(),
+    kams:[...new Set(proyectos.map(p=>p.kam))].sort()
   };
   const promedioDesviacion=HITOS_NAMES.map(h=>({hito:h,promedioDias:+(Math.random()*45-5).toFixed(1)})).sort((a,b)=>b.promedioDias-a.promedioDias);
   const proyectoCritico=[...proyectos].sort((a,b)=>b.conteos.atrasados-a.conteos.atrasados)[0];
