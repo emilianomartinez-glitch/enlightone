@@ -1997,23 +1997,82 @@ function fmtNum(n){return n.toLocaleString('en-US',{maximumFractionDigits:1});}
 function trunc(s,n){return s?.length>n?s.slice(0,n)+'…':s||'';}
 function esc(s){if(!s)return'';const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
 
-  // ═══════════ TAB 4: INSIGHTS IA ═══════════
-    <div class="tab-content" id="tab4">
-      <div class="insights-header">
-        <div class="insights-timestamp-badge">
-          <span class="ts-dot"></span>
-          <span class="ts-label">Último análisis IA</span>
-          <span id="insightsTimestamp">—</span>
-        </div>
-      </div>
+  // ─── TAB 4: INSIGHTS IA ─────────────────────────────────────────
 
-      <div id="insightsContainer">
-        <div class="insights-empty">
-          <span class="empty-icon">◇</span>
-          Cargando insights…
-        </div>
-      </div>
-    </div>
+function renderTab4() {
+  const container = document.getElementById('insightsContainer');
+  const tsEl = document.getElementById('insightsTimestamp');
+  if (!container) return;
+
+  const insights = rawData?.insightsIA || [];
+
+  if (!insights.length) {
+    container.innerHTML = `<div class="insights-empty">
+      <span class="empty-icon">◇</span>
+      No hay insights disponibles aún.<br>
+      <span style="font-size:10px;color:var(--text3);">Los insights se generan automáticamente de lunes a sábado a las 8:00am y 3:00pm.</span>
+    </div>`;
+    tsEl.textContent = '—';
+    return;
+  }
+
+  // Timestamp
+  const ts = insights[0]?.timestamp || '';
+  tsEl.textContent = ts || '—';
+  if (ts) tsEl.style.color = 'var(--accent)';
+
+  // Separar negativos y positivos
+  const negativos = insights.filter(i => i.tipo === 'negativo');
+  const positivos = insights.filter(i => i.tipo === 'positivo');
+
+  let html = '';
+
+  // Sección negativos
+  if (negativos.length) {
+    html += `<div class="insights-section-title" style="color:var(--danger);">
+      <span class="section-dot" style="background:var(--danger);"></span>
+      Alertas y riesgos · ${negativos.length} insight${negativos.length > 1 ? 's' : ''}
+    </div>`;
+    html += '<div class="insights-grid">';
+    negativos.forEach((ins, idx) => {
+      html += renderInsightCard(ins, idx);
+    });
+    html += '</div>';
+  }
+
+  // Sección positivos
+  if (positivos.length) {
+    html += `<div class="insights-section-title" style="color:var(--accent); margin-top:24px;">
+      <span class="section-dot" style="background:var(--accent);"></span>
+      Logros y tendencias positivas · ${positivos.length} insight${positivos.length > 1 ? 's' : ''}
+    </div>`;
+    html += '<div class="insights-grid">';
+    positivos.forEach((ins, idx) => {
+      html += renderInsightCard(ins, idx + negativos.length);
+    });
+    html += '</div>';
+  }
+
+  container.innerHTML = html;
+}
+
+function renderInsightCard(ins, idx) {
+  const tipo = ins.tipo || 'negativo';
+  const badgeClass = tipo === 'positivo' ? 'badge-positivo' : 'badge-negativo';
+  const cardClass = tipo === 'positivo' ? 'card-positivo' : 'card-negativo';
+  const tipoLabel = tipo === 'positivo' ? 'POSITIVO' : 'ALERTA';
+
+  return `<div class="insight-card ${cardClass} animate-in" style="animation-delay:${idx * 0.05}s">
+    <span class="insight-tipo-badge ${badgeClass}">${tipoLabel}</span>
+    <div class="insight-titulo">${esc(ins.titulo || '')}</div>
+    <div class="insight-section-label">Diagnóstico</div>
+    <div class="insight-text">${esc(ins.diagnostico || '')}</div>
+    <div class="insight-section-label">Evidencia</div>
+    <div class="insight-text text-evidencia">${esc(ins.evidencia || '')}</div>
+    <div class="insight-section-label">Recomendación</div>
+    <div class="insight-text text-recomendacion">${esc(ins.recomendacion || '')}</div>
+  </div>`;
+}
 
 // ─── DEMO DATA ───────────────────────────────
 function generateDemoData(){
