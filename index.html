@@ -331,6 +331,76 @@ header { padding:16px 28px 0; background:linear-gradient(180deg,rgba(0,170,133,0
 
 @media (max-width:1100px) { .crono-kpi-grid{grid-template-columns:repeat(3,1fr);} }
 @media (max-width:900px) { .crono-kpi-grid{grid-template-columns:repeat(2,1fr);} }
+
+/* ── TAB 4: INSIGHTS IA ── */
+.insights-header {
+  display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap; gap:8px;
+}
+.insights-timestamp-badge {
+  display:inline-flex; align-items:center; gap:6px;
+  font-family:var(--font-display); font-size:10px; font-weight:600;
+  color:var(--text); background:var(--surface); border:1px solid var(--border);
+  padding:6px 14px; border-radius:3px; letter-spacing:0.5px;
+}
+.insights-timestamp-badge .ts-dot { width:6px; height:6px; border-radius:50%; background:var(--accent); }
+.insights-timestamp-badge .ts-label { font-size:8px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text2); }
+
+.insights-section-title {
+  font-family:var(--font-display); font-weight:700; font-size:11px;
+  letter-spacing:1.5px; text-transform:uppercase; margin:18px 0 10px;
+  display:flex; align-items:center; gap:8px;
+}
+.insights-section-title .section-dot { width:8px; height:8px; border-radius:50%; }
+
+.insights-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(380px, 1fr)); gap:12px; }
+
+.insight-card {
+  background:var(--surface); border-radius:3px; padding:16px 18px;
+  border:1px solid var(--border); transition:border-color .2s, transform .15s;
+  position:relative; overflow:hidden;
+}
+.insight-card:hover { border-color:var(--accent); transform:translateY(-1px); }
+.insight-card::before {
+  content:''; position:absolute; left:0; top:0; bottom:0; width:3px;
+}
+.insight-card.card-negativo { border-left:3px solid var(--danger); }
+.insight-card.card-negativo::before { background:var(--danger); }
+.insight-card.card-positivo { border-left:3px solid var(--accent); }
+.insight-card.card-positivo::before { background:var(--accent); }
+
+.insight-tipo-badge {
+  font-family:var(--font-display); font-size:7px; font-weight:700;
+  letter-spacing:1.5px; text-transform:uppercase; padding:2px 8px;
+  border-radius:2px; display:inline-block; margin-bottom:8px;
+}
+.badge-negativo { background:rgba(255,71,87,0.12); color:var(--danger); border:1px solid rgba(255,71,87,0.2); }
+.badge-positivo { background:rgba(0,170,133,0.12); color:var(--accent); border:1px solid rgba(0,170,133,0.2); }
+
+.insight-titulo {
+  font-family:var(--font-display); font-weight:700; font-size:13px;
+  color:var(--text); margin-bottom:10px; line-height:1.3;
+}
+
+.insight-section-label {
+  font-family:var(--font-display); font-size:7px; font-weight:600;
+  letter-spacing:1.5px; text-transform:uppercase; color:var(--text3);
+  margin-bottom:3px; margin-top:10px;
+}
+.insight-section-label:first-of-type { margin-top:0; }
+
+.insight-text {
+  font-size:11px; color:var(--text); line-height:1.6;
+}
+.insight-text.text-evidencia { color:var(--text2); font-size:10px; }
+.insight-text.text-recomendacion { color:var(--accent-bright); font-size:11px; font-weight:500; }
+
+.insights-empty {
+  text-align:center; padding:60px 20px; color:var(--text3);
+  font-size:12px; line-height:1.8;
+}
+.insights-empty .empty-icon { font-size:32px; margin-bottom:12px; display:block; opacity:.5; }
+
+@media (max-width:900px) { .insights-grid{grid-template-columns:1fr;} }
   
 footer { padding:10px 28px; border-top:1px solid var(--border); display:flex; justify-content:space-between; font-size:9px; color:var(--text3); letter-spacing:1px; }
 
@@ -370,6 +440,8 @@ footer { padding:10px 28px; border-top:1px solid var(--border); display:flex; ju
       <button class="tab-btn active" data-tab="tab1">Estado General</button>
       <button class="tab-btn" data-tab="tab2">Rendimiento y Desviaciones</button>
       <button class="tab-btn" data-tab="tab3">Cronograma y Pronóstico</button>
+      <button class="tab-btn" data-tab="tab4">Insights IA</button>
+
     </div>
   </header>
 
@@ -597,6 +669,24 @@ footer { padding:10px 28px; border-top:1px solid var(--border); display:flex; ju
             </tr></thead>
             <tbody id="forecastTableBody"></tbody>
           </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════ TAB 4: INSIGHTS IA ═══════════ -->
+    <div class="tab-content" id="tab4">
+      <div class="insights-header">
+        <div class="insights-timestamp-badge">
+          <span class="ts-dot"></span>
+          <span class="ts-label">Último análisis IA</span>
+          <span id="insightsTimestamp">—</span>
+        </div>
+      </div>
+
+      <div id="insightsContainer">
+        <div class="insights-empty">
+          <span class="empty-icon">◇</span>
+          Cargando insights…
         </div>
       </div>
     </div>
@@ -912,6 +1002,7 @@ function renderAll() {
   renderChartSubcontratista();
   renderKPIs2(); renderChartDesviacion(); renderChartRendPM(); renderTreemap(); renderChartCuentaRendimiento(); renderCuentaTable();
   renderTab3();
+  renderTab4();
 
 }
 
@@ -1905,6 +1996,24 @@ function countBy(arr,key){const o={};arr.forEach(i=>{const v=i[key]||'(vacío)';
 function fmtNum(n){return n.toLocaleString('en-US',{maximumFractionDigits:1});}
 function trunc(s,n){return s?.length>n?s.slice(0,n)+'…':s||'';}
 function esc(s){if(!s)return'';const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+
+  <!-- ═══════════ TAB 4: INSIGHTS IA ═══════════ -->
+    <div class="tab-content" id="tab4">
+      <div class="insights-header">
+        <div class="insights-timestamp-badge">
+          <span class="ts-dot"></span>
+          <span class="ts-label">Último análisis IA</span>
+          <span id="insightsTimestamp">—</span>
+        </div>
+      </div>
+
+      <div id="insightsContainer">
+        <div class="insights-empty">
+          <span class="empty-icon">◇</span>
+          Cargando insights…
+        </div>
+      </div>
+    </div>
 
 // ─── DEMO DATA ───────────────────────────────
 function generateDemoData(){
