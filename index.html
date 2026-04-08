@@ -305,7 +305,7 @@ header { padding:16px 28px 0; background:linear-gradient(180deg,rgba(0,170,133,0
 .gantt-today { position:absolute; top:0; bottom:0; width:2px; background:var(--danger); z-index:1; opacity:.7; pointer-events:none; }
 .gantt-bar { position:absolute; top:4px; height:16px; border-radius:2px; min-width:2px; cursor:pointer; }
 .gantt-bar:hover { filter:brightness(1.4); z-index:5; }
-.gantt-bar-plan { top:6px; height:12px; border:1px dashed rgba(255,255,255,0.25); background:transparent !important; opacity:.4; }
+.gantt-bar-plan { top:6px; height:12px; border:1.5px dashed; opacity:.55; }
 .gantt-bar-done { opacity:.35 !important; }
 .gantt-bar-hito { width:8px; height:8px; top:8px; border-radius:50%; border:1.5px solid rgba(255,255,255,.8); margin-left:-4px; z-index:2; }
 .gantt-tooltip-box { position:fixed; z-index:9999; background:var(--surface2); border:1px solid var(--border); border-radius:3px; padding:8px 12px; font-size:9px; color:var(--text); pointer-events:none; max-width:300px; line-height:1.6; box-shadow:0 4px 16px rgba(0,0,0,.5); }
@@ -467,6 +467,7 @@ footer { padding:10px 28px; border-top:1px solid var(--border); display:flex; ju
           <div class="chart-title">Estatus por hito</div>
           <div class="chart-desc">Distribución acumulada de cada hito</div>
           <div class="chart-wrapper" style="height:260px"><canvas id="chartHitos"></canvas></div>
+          <div id="hitosDetailPanel"></div>
         </div>
         <div class="chart-card">
           <div class="chart-title">Por fase</div>
@@ -903,7 +904,12 @@ function getAvailableValues(excludeKey) {
   });
   // Also apply chartFilter and kpiFilter and saludFilter
   if (chartFilter && chartFilter.key !== excludeKey) {
-    subset = subset.filter(p => p[chartFilter.key] === chartFilter.value);
+    const cfVal = chartFilter.value;
+    if (cfVal === 'Sin datos') {
+      subset = subset.filter(p => !p[chartFilter.key]);
+    } else {
+      subset = subset.filter(p => p[chartFilter.key] === cfVal);
+    }
   }
   if (kpiFilter) subset = subset.filter(p => p.conteos[kpiFilter] > 0);
   if (saludFilter) subset = subset.filter(p => p.conteos.atrasados > 0);
@@ -950,7 +956,14 @@ function applyFilters() {
       if (vals.size > 0 && !vals.has(p[key])) return false;
     }
     // Chart filter
-    if (chartFilter && p[chartFilter.key] !== chartFilter.value) return false;
+    if (chartFilter) {
+      const cfVal = chartFilter.value;
+      if (cfVal === 'Sin datos') {
+        if (p[chartFilter.key]) return false;
+      } else {
+        if (p[chartFilter.key] !== cfVal) return false;
+      }
+    }
     // KPI filter
     if (kpiFilter && p.conteos[kpiFilter] <= 0) return false;
     // Salud filter
@@ -959,6 +972,7 @@ function applyFilters() {
   });
 
   // Rebuild filters to update available options (bidirectional)
+  hitosDetailState = null; // clear hitos detail panel on filter change
   buildFilters();
   renderAll();
 
@@ -1027,7 +1041,7 @@ function renderAlertBanner() {
 
     el.innerHTML = `<div class="alert-card dq-tooltip-trigger" tabindex="0" role="button" aria-describedby="dqTooltip">
       <div class="alert-title" style="color:var(--warn)"><span class="dot" style="background:var(--warn)"></span>Calidad de datos</div>
-      <div class="alert-body">${parts.join(' · ')} — <span class="hl-muted">estos proyectos pueden no participar en métricas de rendimiento</span></div>
+      <div class="alert-body">${parts.join(' · ')} — <span class="hl-muted">estos proyectos se excluyen de las métricas de rendimiento por información incompleta</span></div>
       <div class="dq-tooltip" id="dqTooltip" role="tooltip">
         <div style="font-family:var(--font-display);font-weight:700;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--text2);margin-bottom:6px;">Proyectos afectados (${affected.length})</div>
         <div style="display:flex;justify-content:space-between;gap:12px;margin-bottom:4px;border-bottom:1px solid var(--border);padding-bottom:3px;">
@@ -1279,14 +1293,95 @@ function initTableSort(){
 }
 
 // ─── CHARTS ──────────────────────────────────
+let hitosDetailState = null; // {hitoIdx, datasetIdx, hito, estatus}
+
 function renderChartHitos(){
   const data=HITOS_NAMES.map(nombre=>{
     const s={hito:nombre,atrasado:0,conRetraso:0,pendiente:0,aTiempo:0};
     filteredProyectos.forEach(p=>{const h=p.hitos?.find(x=>x.nombre===nombre);if(!h?.estatus)return;if(h.estatus==='Atrasado')s.atrasado++;else if(h.estatus==='Cumplido con retraso')s.conRetraso++;else if(h.estatus==='Pendiente')s.pendiente++;else if(h.estatus==='Cumplido a tiempo')s.aTiempo++;});
     return s;
   });
+  const datasetMap = ['Atrasado','Cumplido con retraso','Pendiente','Cumplido a tiempo'];
   destroyChart('chartHitos');
-  charts.chartHitos=new Chart(document.getElementById('chartHitos'),{type:'bar',data:{labels:data.map(d=>trunc(d.hito,20)),datasets:[{label:'Atrasado',data:data.map(d=>d.atrasado),backgroundColor:COLORS.danger},{label:'C. retraso',data:data.map(d=>d.conRetraso),backgroundColor:COLORS.warn},{label:'Pendiente',data:data.map(d=>d.pendiente),backgroundColor:COLORS.pending},{label:'A tiempo',data:data.map(d=>d.aTiempo),backgroundColor:COLORS.accent}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:8}}}},scales:{x:{stacked:true,grid:{color:'rgba(41,60,71,0.3)'},ticks:{font:{size:8}}},y:{stacked:true,grid:{display:false},ticks:{font:{size:8}}}}}});
+  charts.chartHitos=new Chart(document.getElementById('chartHitos'),{type:'bar',data:{labels:data.map(d=>trunc(d.hito,20)),datasets:[{label:'Atrasado',data:data.map(d=>d.atrasado),backgroundColor:COLORS.danger},{label:'C. retraso',data:data.map(d=>d.conRetraso),backgroundColor:COLORS.warn},{label:'Pendiente',data:data.map(d=>d.pendiente),backgroundColor:COLORS.pending},{label:'A tiempo',data:data.map(d=>d.aTiempo),backgroundColor:COLORS.accent}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:8}}}},scales:{x:{stacked:true,grid:{color:'rgba(41,60,71,0.3)'},ticks:{font:{size:8}}},y:{stacked:true,grid:{display:false},ticks:{font:{size:8}}}},
+    onClick:(evt,els)=>{
+      if(!els.length) return;
+      const hitoIdx = els[0].index;
+      const datasetIdx = els[0].datasetIndex;
+      // Toggle: same click clears
+      if(hitosDetailState && hitosDetailState.hitoIdx===hitoIdx && hitosDetailState.datasetIdx===datasetIdx){
+        hitosDetailState=null;
+      } else {
+        hitosDetailState={hitoIdx, datasetIdx, hito:HITOS_NAMES[hitoIdx], estatus:datasetMap[datasetIdx]};
+      }
+      renderHitosDetailPanel();
+    }
+  }});
+  renderHitosDetailPanel();
+}
+
+function renderHitosDetailPanel(){
+  const el=document.getElementById('hitosDetailPanel');
+  if(!el) return;
+  if(!hitosDetailState){el.innerHTML='';return;}
+  const {hito, estatus}=hitosDetailState;
+  const rows=filteredProyectos.filter(p=>{
+    const h=p.hitos?.find(x=>x.nombre===hito);
+    return h && h.estatus===estatus;
+  });
+  if(!rows.length){el.innerHTML='';hitosDetailState=null;return;}
+
+  const statusColors={'Atrasado':'var(--danger)','Cumplido con retraso':'var(--warn)','Pendiente':'var(--pending)','Cumplido a tiempo':'var(--accent)'};
+  const statusLabels={'Atrasado':'Atrasado','Cumplido con retraso':'C. retraso','Pendiente':'Pendiente','Cumplido a tiempo':'A tiempo'};
+  const stColor=statusColors[estatus]||'var(--text3)';
+
+  // Contextual column header
+  let colHeader='';
+  if(estatus==='Atrasado') colHeader='Días atraso';
+  else if(estatus==='Cumplido con retraso') colHeader='Días retraso';
+  else colHeader='Estatus';
+
+  el.innerHTML=`<div style="margin-top:10px;animation:fadeUp .25s ease both;">
+    <div class="table-card">
+      <div class="table-header">
+        <div style="display:flex;align-items:baseline;gap:6px;">
+          <div class="table-title">${esc(trunc(hito,30))}</div>
+          <span class="table-count">${statusLabels[estatus]} · ${rows.length} proyecto${rows.length>1?'s':''}</span>
+        </div>
+        <span style="cursor:pointer;color:var(--text3);font-size:14px;line-height:1;" onclick="hitosDetailState=null;renderHitosDetailPanel();" title="Cerrar">✕</span>
+      </div>
+      <div class="table-scroll" style="max-height:260px;">
+        <table class="data-table">
+          <thead><tr>
+            <th>PROJ</th><th>Sitio</th><th>Cuenta</th><th>PM</th><th>KAM</th><th>SPI</th><th>${colHeader}</th>
+          </tr></thead>
+          <tbody>${rows.map(p=>{
+            const spi=calcSPI(p.conteos);
+            const spiStr=spi!==null?spi.toFixed(2):'—';
+            const h=p.hitos.find(x=>x.nombre===hito);
+            const dias=h?.diasDesviacion;
+            let ctxCell='';
+            if(estatus==='Atrasado'){
+              ctxCell=`<span style="color:var(--danger);font-weight:600;">${dias!==null&&dias!==undefined?'+'+Math.abs(dias)+'d':'—'}</span>`;
+            } else if(estatus==='Cumplido con retraso'){
+              ctxCell=`<span style="color:var(--warn);font-weight:600;">${dias!==null&&dias!==undefined?'+'+Math.abs(dias)+'d':'—'}</span>`;
+            } else {
+              ctxCell=`<span class="mini-badge" style="background:${stColor}18;color:${stColor};border:1px solid ${stColor}33;">${statusLabels[estatus]}</span>`;
+            }
+            return `<tr>
+              <td><span class="proj-id">${esc(p.proj)}</span></td>
+              <td>${trunc(p.sitio,24)}</td>
+              <td>${esc(p.cuenta)}</td>
+              <td>${trunc(p.pm,16)}</td>
+              <td>${trunc(p.kam||'—',14)}</td>
+              <td><span class="spi-indicator"><span class="spi-dot ${spiClass(spi)}"></span>${spiStr}</span></td>
+              <td>${ctxCell}</td>
+            </tr>`;
+          }).join('')}</tbody>
+        </table>
+      </div>
+    </div>
+  </div>`;
 }
 
 function renderChartFases(){
@@ -1627,7 +1722,14 @@ function getFilteredPronosticos() {
       if (vals.size > 0 && !vals.has(p[key])) return false;
     }
     // Chart filter
-    if (chartFilter && p[chartFilter.key] !== chartFilter.value) return false;
+    if (chartFilter) {
+      const cfVal = chartFilter.value;
+      if (cfVal === 'Sin datos') {
+        if (p[chartFilter.key]) return false;
+      } else {
+        if (p[chartFilter.key] !== cfVal) return false;
+      }
+    }
     return true;
   });
   return filteredPronosticos;
@@ -1770,7 +1872,7 @@ function renderGantt() {
     // Phase bars
     (p.fases || []).forEach(f => {
       if (f.planInicio && f.planFin) {
-        tbody += `<div class="gantt-bar gantt-bar-plan" style="left:${toLeft(f.planInicio)}%;width:${toWidth(f.planInicio, f.planFin)}%;border-color:${f.color}44;" data-gantt-tip="<span class='tt-label'>Plan ${esc(f.nombre)}</span><br>${f.planInicio} → ${f.planFin}"></div>`;
+        tbody += `<div class="gantt-bar gantt-bar-plan" style="left:${toLeft(f.planInicio)}%;width:${toWidth(f.planInicio, f.planFin)}%;border-color:${f.color}88;background:${f.color}12;" data-gantt-tip="<span class='tt-label'>Plan ${esc(f.nombre)}</span><br>${f.planInicio} → ${f.planFin}"></div>`;
       }
       if (f.fechaInicio && f.fechaFin) {
         const doneCls = closed ? ' gantt-bar-done' : '';
@@ -1991,7 +2093,7 @@ function renderForecastTable() {
 
 // ─── HELPERS ─────────────────────────────────
 function destroyChart(id){if(charts[id]){charts[id].destroy();charts[id]=null;}}
-function countBy(arr,key){const o={};arr.forEach(i=>{const v=i[key]||'(vacío)';o[v]=(o[v]||0)+1;});return o;}
+function countBy(arr,key){const o={};arr.forEach(i=>{const v=i[key]||'Sin datos';o[v]=(o[v]||0)+1;});return o;}
 function fmtNum(n){return n.toLocaleString('en-US',{maximumFractionDigits:1});}
 function trunc(s,n){return s?.length>n?s.slice(0,n)+'…':s||'';}
 function esc(s){if(!s)return'';const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
