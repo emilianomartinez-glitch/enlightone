@@ -375,7 +375,10 @@ header { padding:16px 28px 0; background:linear-gradient(180deg,rgba(0,170,133,0
 }
 .badge-negativo { background:rgba(255,71,87,0.12); color:var(--danger); border:1px solid rgba(255,71,87,0.2); }
 .badge-positivo { background:rgba(0,170,133,0.12); color:var(--accent); border:1px solid rgba(0,170,133,0.2); }
-
+.badge-informativo { background:rgba(76,159,255,0.12); color:var(--pending); border:1px solid rgba(76,159,255,0.2); }
+.insight-card.card-informativo { border-left:3px solid var(--pending); }
+.insight-card.card-informativo::before { background:var(--pending); }
+  
 .insight-titulo {
   font-family:var(--font-display); font-weight:700; font-size:13px;
   color:var(--text); margin-bottom:10px; line-height:1.3;
@@ -2150,9 +2153,10 @@ function renderTab4() {
   tsEl.textContent = ts || '—';
   if (ts) tsEl.style.color = 'var(--accent)';
 
-  // Separar negativos y positivos
+  // Separar negativos, positivos e informativos
   const negativos = insights.filter(i => i.tipo === 'negativo');
   const positivos = insights.filter(i => i.tipo === 'positivo');
+  const informativos = insights.filter(i => i.tipo === 'informativo');
 
   let html = '';
 
@@ -2182,14 +2186,27 @@ function renderTab4() {
     html += '</div>';
   }
 
+  // Sección informativos
+  if (informativos.length) {
+    html += `<div class="insights-section-title" style="color:var(--pending); margin-top:24px;">
+      <span class="section-dot" style="background:var(--pending);"></span>
+      Contexto y resumen · ${informativos.length} insight${informativos.length > 1 ? 's' : ''}
+    </div>`;
+    html += '<div class="insights-grid">';
+    informativos.forEach((ins, idx) => {
+      html += renderInsightCard(ins, idx + negativos.length + positivos.length);
+    });
+    html += '</div>';
+  }
+
   container.innerHTML = html;
 }
 
 function renderInsightCard(ins, idx) {
   const tipo = ins.tipo || 'negativo';
-  const badgeClass = tipo === 'positivo' ? 'badge-positivo' : 'badge-negativo';
-  const cardClass = tipo === 'positivo' ? 'card-positivo' : 'card-negativo';
-  const tipoLabel = tipo === 'positivo' ? 'POSITIVO' : 'ALERTA';
+  const badgeClass = tipo === 'positivo' ? 'badge-positivo' : tipo === 'informativo' ? 'badge-informativo' : 'badge-negativo';
+  const cardClass = tipo === 'positivo' ? 'card-positivo' : tipo === 'informativo' ? 'card-informativo' : 'card-negativo';
+  const tipoLabel = tipo === 'positivo' ? 'POSITIVO' : tipo === 'informativo' ? 'INFORMATIVO' : 'ALERTA';
 
   return `<div class="insight-card ${cardClass} animate-in" style="animation-delay:${idx * 0.05}s">
     <span class="insight-tipo-badge ${badgeClass}">${tipoLabel}</span>
