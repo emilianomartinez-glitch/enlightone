@@ -557,8 +557,8 @@ footer { padding:10px 28px; border-top:1px solid var(--border); display:flex; ju
       <div class="section-label">Análisis de desviaciones</div>
       <div class="charts-row">
         <div class="chart-card">
-          <div class="chart-title">Desviación promedio por hito (días)</div>
-          <div class="chart-desc">Mayor desviación respecto a fecha prevista</div>
+          <div class="chart-title">Desviación neta promedio por hito (días)</div>
+          <div class="chart-desc">Descontando días On Hold · mayor desviación respecto a fecha base</div>
           <div class="chart-wrapper" style="height:260px"><canvas id="chartDesviacion"></canvas></div>
         </div>
         <div class="chart-card">
@@ -1479,11 +1479,12 @@ function renderKPIs2(){
   const totalH=p.reduce((s,x)=>s+x.conteos.total,0);
   const totalAT=p.reduce((s,x)=>s+x.conteos.aTiempo,0);
   const pctAT=totalH?((totalAT/totalH)*100).toFixed(1):'0';
-  const avgD=rawData.promedioDesviacion?.length?(rawData.promedioDesviacion.reduce((s,d)=>s+d.promedioDias,0)/rawData.promedioDesviacion.length).toFixed(1):'—';
+  const srcDesv=rawData.promedioDesviacionNeta||rawData.promedioDesviacion||[];
+  const avgD=srcDesv.length?(srcDesv.reduce((s,d)=>s+d.promedioDias,0)/srcDesv.length).toFixed(1):'—';
   const crit=rawData.proyectoCritico;
   const cards=[
     {label:'% Hitos a tiempo',value:pctAT+'%',sub:`${totalAT} de ${totalH}`,cls:'c-accent'},
-    {label:'Desv. promedio vs. fecha base',value:avgD+' d',sub:'días promedio',cls:'c-warn'},
+    {label:'Desv. neta promedio',value:avgD+' d',sub:'sin días On Hold',cls:'c-warn'},
     {label:'Proyecto crítico',value:crit?crit.proj:'—',sub:crit?`${crit.conteos.atrasados} atr · ${trunc(crit.sitio,18)}`:'',cls:'c-danger'},
     {label:'Hitos evaluados',value:totalH,sub:'portafolio total',cls:'c-neutral'},
   ];
@@ -1496,7 +1497,7 @@ function renderKPIs2(){
 }
 
 function renderChartDesviacion(){
-  const data=[...(rawData.promedioDesviacion||[])].sort((a,b)=>b.promedioDias-a.promedioDias); destroyChart('chartDesviacion');
+  const data=[...(rawData.promedioDesviacionNeta||rawData.promedioDesviacion||[])].sort((a,b)=>b.promedioDias-a.promedioDias); destroyChart('chartDesviacion');
   charts.chartDesviacion=new Chart(document.getElementById('chartDesviacion'),{type:'bar',data:{labels:data.map(d=>trunc(d.hito,20)),datasets:[{data:data.map(d=>d.promedioDias),backgroundColor:data.map(d=>d.promedioDias>30?COLORS.danger+'cc':d.promedioDias>15?COLORS.warn+'cc':COLORS.accent+'88'),borderWidth:0}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,grid:{color:'rgba(41,60,71,0.3)'},title:{display:true,text:'Días',color:'#5a5858',font:{size:9}},ticks:{font:{size:8}}},y:{grid:{display:false},ticks:{font:{size:8}}}}}});
 }
 
