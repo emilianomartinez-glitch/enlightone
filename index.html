@@ -735,6 +735,19 @@ Chart.defaults.plugins.tooltip.bodyFont = { family:"'Roboto',sans-serif", size:1
 Chart.defaults.plugins.tooltip.padding = 8;
 Chart.defaults.plugins.tooltip.cornerRadius = 3;
 
+const ADO_COLORS = {
+  'Activo': '#00AA85',
+  'On Hold': '#ff9f43',
+  'Legado': '#828080',
+  'Cancelado': '#ff4757',
+  'En Comercial': '#4c9fff',
+  'Terminado': '#3D7D80',
+};
+function adoDot(estatusAdO) {
+  const c = ADO_COLORS[estatusAdO] || '#828080';
+  return `<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${c};margin-right:4px;vertical-align:middle;" title="${esc(estatusAdO || 'Sin estatus')}"></span>`;
+}
+
 const COLORS = {
   danger:'#ff4757', warn:'#ff9f43', pending:'#4c9fff',
   accent:'#00AA85', teal:'#3D7D80', c1:'#293C47', spi:'#9f7aff',
@@ -1189,7 +1202,7 @@ function renderTable() {
     const spiStr=spi!==null?spi.toFixed(2):'—';
     const isExp = expandedProj === p.proj;
     let html = `<tr class="clickable-row${isExp?' row-expanded':''}" onclick="toggleRowDetail('${esc(p.proj)}')">
-      <td><span class="proj-id">${esc(p.proj)}</span></td>
+      <td>${adoDot(p.estatusAdO)}<span class="proj-id">${esc(p.proj)}</span></td>
       <td>${esc(p.sitio)}</td><td>${esc(p.cuenta)}</td><td>${esc(p.pm)}</td>
       <td>${esc(p.tipo)}</td><td>${esc(p.tecnologia)}</td>
       <td>${p.potenciaFV||'—'}</td><td>${p.potenciaSTO||'—'}</td>
@@ -1597,10 +1610,19 @@ function renderCuentaTable(){
 
   // Build desviaciones lookup: first comment/area per project
   const desvLookup = {};
+  const desvOHLookup = {};
   if (rawData.desviaciones) {
     rawData.desviaciones.forEach(d => {
-      if (!d.proj || desvLookup[d.proj]) return;
-      desvLookup[d.proj] = { comentario: d.comentariosRetraso || '', area: d.areaResponsable || '' };
+      if (!d.proj) return;
+      if (!desvLookup[d.proj]) {
+        desvLookup[d.proj] = { comentario: d.comentariosRetraso || '', area: d.areaResponsable || '' };
+      }
+      if (!desvOHLookup[d.proj]) desvOHLookup[d.proj] = { totalOH: 0, sumNeta: 0, countNeta: 0 };
+      desvOHLookup[d.proj].totalOH += (d.diasOnHold || 0);
+      if (d.desviacionNeta !== null && !isNaN(d.desviacionNeta)) {
+        desvOHLookup[d.proj].sumNeta += d.desviacionNeta;
+        desvOHLookup[d.proj].countNeta++;
+      }
     });
   }
 
@@ -1634,6 +1656,8 @@ function renderCuentaTable(){
             <th style="padding:4px 8px;text-align:left;font-size:7px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);font-weight:600;">Atr</th>
             <th style="padding:4px 8px;text-align:left;font-size:7px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);font-weight:600;">Ret</th>
             <th style="padding:4px 8px;text-align:left;font-size:7px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);font-weight:600;">OK</th>
+            <th style="padding:4px 8px;text-align:left;font-size:7px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);font-weight:600;">Días OH</th>
+            <th style="padding:4px 8px;text-align:left;font-size:7px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);font-weight:600;">Desv. Neta</th>
             <th style="padding:4px 8px;text-align:left;font-size:7px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);font-weight:600;">Comentarios de Retraso</th>
             <th style="padding:4px 8px;text-align:left;font-size:7px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);font-weight:600;">Área Resp.</th>
           </tr></thead><tbody>`;
@@ -1643,7 +1667,7 @@ function renderCuentaTable(){
         const pSpiStr = pSpi !== null ? pSpi.toFixed(2) : '—';
         const dv = desvLookup[p.proj] || {};
         html += `<tr style="border-bottom:1px solid rgba(41,60,71,0.15);">
-          <td style="padding:4px 8px;"><span class="proj-id" style="font-size:9px;">${esc(p.proj)}</span></td>
+          <td style="padding:4px 8px;">${adoDot(p.estatusAdO)}<span class="proj-id" style="font-size:9px;">${esc(p.proj)}</span></td>
           <td style="padding:4px 8px;color:var(--text2);">${trunc(p.sitio, 22)}</td>
           <td style="padding:4px 8px;color:var(--text2);">${trunc(p.pm, 16)}</td>
           <td style="padding:4px 8px;color:var(--text2);">${trunc(p.kam || '—', 14)}</td>
@@ -1651,6 +1675,8 @@ function renderCuentaTable(){
           <td style="padding:4px 8px;"><span class="mini-badge badge-danger">${p.conteos.atrasados}</span></td>
           <td style="padding:4px 8px;"><span class="mini-badge badge-warn">${p.conteos.conRetraso}</span></td>
           <td style="padding:4px 8px;"><span class="mini-badge badge-accent">${p.conteos.aTiempo}</span></td>
+          <td style="padding:4px 8px;text-align:center;"><span style="color:${(desvOHLookup[p.proj]?.totalOH || 0) > 0 ? 'var(--warn)' : 'var(--text3)'};font-weight:600;">${(desvOHLookup[p.proj]?.totalOH || 0) > 0 ? desvOHLookup[p.proj].totalOH + 'd' : '—'}</span></td>
+          <td style="padding:4px 8px;text-align:center;"><span style="color:${(desvOHLookup[p.proj]?.countNeta || 0) > 0 ? ((desvOHLookup[p.proj].sumNeta / desvOHLookup[p.proj].countNeta) > 15 ? 'var(--danger)' : 'var(--text)') : 'var(--text3)'};font-weight:500;">${(desvOHLookup[p.proj]?.countNeta || 0) > 0 ? Math.round(desvOHLookup[p.proj].sumNeta / desvOHLookup[p.proj].countNeta) + 'd' : '—'}</span></td>
           <td style="padding:4px 8px;color:var(--text2);" class="comment-cell">${esc(dv.comentario) || '<span style="color:var(--text3);">—</span>'}</td>
           <td style="padding:4px 8px;"><span class="mini-badge" style="background:rgba(61,125,128,0.12);color:var(--teal);border:1px solid rgba(61,125,128,0.2);">${esc(dv.area) || '—'}</span></td>
         </tr>`;
