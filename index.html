@@ -713,7 +713,7 @@ let cuentaSortState = { col: null, asc: true };
 let faseSortState = { col: null, asc: true };
 let saludFilter = false; // toggle: show only projects with hitos atrasados
 let expandedCuentas = new Set(); // expanded cuenta rows in Tab 2
-let multiSelectState = {}; // { key: Set([values]) } for multi-select filters
+let multiSelectState = { estatusAdO: new Set(['Activo']) }; // { key: Set([values]) } for multi-select filters
 
 function toggleKpiFilter(key) {
   kpiFilter = (kpiFilter === key) ? null : key;
@@ -803,6 +803,7 @@ function buildFilters() {
     {key:'tipoProv',label:'Proveeduría',src:'proveedurias'},
     {key:'supervisor',label:'Supervisor',src:'supervisores'},
     {key:'entidadFed',label:'Entidad',src:'entidades'},
+    {key:'estatusAdO',label:'Estatus AdO',src:'estatusAdO'},
   ];
   // Initialize multiSelectState for each key if not already set
   defs.forEach(f => { if (!multiSelectState[f.key]) multiSelectState[f.key] = new Set(); });
@@ -881,6 +882,7 @@ function buildFilters() {
     const rb = document.createElement('button'); rb.className = 'filter-reset'; rb.textContent = '✕ Limpiar';
     rb.addEventListener('click', () => {
       Object.keys(multiSelectState).forEach(k => multiSelectState[k] = new Set());
+      multiSelectState.estatusAdO = new Set(['Activo']);
       chartFilter = null; chartFilterSource = null; kpiFilter = null; saludFilter = false;
       applyFilters();
     });
