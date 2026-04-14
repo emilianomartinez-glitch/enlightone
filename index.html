@@ -1290,7 +1290,8 @@ function renderDetailRow(p) {
             <strong>% de AdO:</strong> ${p.pctObra ? (v => Math.round(v > 1.01 ? v : v * 100))(parseFloat(p.pctObra)) + '%' : '—'}<br>
             <strong>Potencia SFV:</strong> ${p.potenciaFV || '—'} kWp<br>
             <strong>SAE:</strong> ${p.potenciaSTO || '—'} kW / ${p.capacidadSTO || '—'} kWh<br>
-            <strong>SPI:</strong> <span style="color:${spiC};font-weight:700;">${spiStr}</span>
+            <strong>SPI:</strong> <span style="color:${spiC};font-weight:700;">${spiStr}</span><br>
+            <strong>Commissioning:</strong> ${(() => { const hc = hitos.find(h => h.nombre === 'Commissioning'); if (!hc) return '—'; return hc.fechaModificada || hc.fechaTentativa || hc.fechaPlan || '—'; })()}
           </div>
         </div>
       </div>
