@@ -1621,7 +1621,7 @@ function renderCuentaTable(){
         desvLookup[d.proj] = { comentario: d.comentariosRetraso || '', area: d.areaResponsable || '' };
       }
       if (!desvOHLookup[d.proj]) desvOHLookup[d.proj] = { totalOH: 0, sumNeta: 0, countNeta: 0 };
-      desvOHLookup[d.proj].totalOH += (d.diasOnHold || 0);
+      desvOHLookup[d.proj].totalOH = Math.max(desvOHLookup[d.proj].totalOH, d.diasOnHold || 0);
       if (d.desviacionNeta !== null && !isNaN(d.desviacionNeta)) {
         desvOHLookup[d.proj].sumNeta += d.desviacionNeta;
         desvOHLookup[d.proj].countNeta++;
