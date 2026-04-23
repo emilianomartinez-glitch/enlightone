@@ -1569,7 +1569,7 @@ if(faseSortState.col==='spi'){
             const spiStr=spi!==null?spi.toFixed(2):'—';
             return `<tr>
               <td><span class="proj-id">${esc(p.proj)}</span></td>
-              <td>${trunc(p.sitio,45)}</td>
+              <td style="white-space:normal;">${esc(p.sitio)}</td>
               <td>${esc(p.cuenta)}</td>
               <td>${trunc(p.pm,16)}</td>
               <td><span class="spi-indicator"><span class="spi-dot ${spiClass(spi)}"></span>${spiStr}</span></td>
@@ -1681,7 +1681,7 @@ function renderCuentaTable(){
         const dv = desvLookup[p.proj] || {};
         html += `<tr style="border-bottom:1px solid rgba(41,60,71,0.15);">
           <td style="padding:4px 8px;">${adoDot(p.estatusAdO)}<span class="proj-id" style="font-size:9px;">${esc(p.proj)}</span></td>
-          <td style="padding:4px 8px;color:var(--text2);">${trunc(p.sitio, 22)}</td>
+          <td style="padding:4px 8px;color:var(--text2);white-space:normal;">${esc(p.sitio)}</td>          
           <td style="padding:4px 8px;color:var(--text2);">${trunc(p.pm, 16)}</td>
           <td style="padding:4px 8px;color:var(--text2);">${trunc(p.kam || '—', 14)}</td>
           <td style="padding:4px 8px;"><span class="spi-indicator"><span class="spi-dot ${spiClass(pSpi)}"></span>${pSpiStr}</span></td>
