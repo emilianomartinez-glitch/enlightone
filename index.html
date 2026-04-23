@@ -1265,7 +1265,7 @@ function renderDetailRow(p) {
     <div class="detail-content">
       <div class="detail-grid">
         <div>
-          <div class="detail-hitos-title">Hitos — ${esc(p.proj)} · ${trunc(p.sitio, 30)}</div>
+          <div class="detail-hitos-title">Hitos — ${esc(p.proj)} · ${trunc(p.sitio, 45)}</div>
           ${hitosHtml}
         </div>
         <div style="padding-left:16px;">
@@ -1381,7 +1381,7 @@ function renderHitosDetailPanel(){
             }
             return `<tr>
               <td><span class="proj-id">${esc(p.proj)}</span></td>
-              <td>${trunc(p.sitio,24)}</td>
+              <td>${trunc(p.sitio,45)}</td>
               <td>${esc(p.cuenta)}</td>
               <td>${trunc(p.pm,16)}</td>
               <td>${trunc(p.kam||'—',14)}</td>
@@ -1569,7 +1569,7 @@ if(faseSortState.col==='spi'){
             const spiStr=spi!==null?spi.toFixed(2):'—';
             return `<tr>
               <td><span class="proj-id">${esc(p.proj)}</span></td>
-              <td style="white-space:normal;">${esc(p.sitio)}</td>
+              <td>${esc(p.sitio)}</td>
               <td>${esc(p.cuenta)}</td>
               <td>${trunc(p.pm,16)}</td>
               <td><span class="spi-indicator"><span class="spi-dot ${spiClass(spi)}"></span>${spiStr}</span></td>
@@ -1901,7 +1901,7 @@ function renderGantt() {
   prons.forEach(p => {
     const closed = isProjectClosed(p);
     const rowOpacity = closed ? ' style="opacity:.45;"' : '';
-    const lbl = `<span class="proj-id">${esc(p.proj)}</span> <span style="color:var(--text2);font-size:8px;">${trunc(p.sitio, 30)}</span>`;    tbody += `<tr${rowOpacity}><td class="gantt-label-cell" title="${esc(p.cuenta)} — ${esc(p.faseActual)}${closed ? ' [CERRADO]' : ''}">${lbl}${closed ? '<span style="font-size:7px;color:var(--text3);margin-left:4px;">✓</span>' : ''}</td>`;
+    const lbl = `<span class="proj-id">${esc(p.proj)}</span> <span style="color:var(--text2);font-size:8px;">${trunc(p.sitio, 45)}</span>`;    tbody += `<tr${rowOpacity}><td class="gantt-label-cell" title="${esc(p.cuenta)} — ${esc(p.faseActual)}${closed ? ' [CERRADO]' : ''}">${lbl}${closed ? '<span style="font-size:7px;color:var(--text3);margin-left:4px;">✓</span>' : ''}</td>`;
     tbody += `<td colspan="${cols.length}" style="position:relative;min-width:${cols.length * colW}px;">`;
 
     // Today line
