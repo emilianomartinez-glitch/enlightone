@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="dashboard-logic.js"></script>
+<style>
+@font-face{font-family:"Alexandria";src:url("fonts/Alexandria-VariableFont_wght.ttf") format("truetype");font-weight:100 900;font-display:swap;}
+@font-face{font-family:"Albert Sans";src:url("fonts/AlbertSans-VariableFont_wght.ttf") format("truetype");font-weight:100 900;font-display:swap;}
+
+:root{
+  --accent:#00AA85;--accent-dim:rgba(0,170,133,.08);--accent-bright:#00cc9f;
+  --warn:#C28A24;--danger:#B83A3A;--pending:#3D7D80;--teal:#3D7D80;
+  --bg:#F5F6F7;--surface:#FFFFFF;--surface2:#F7F8F9;
+  --text:#293C47;--text2:rgba(41,60,71,.65);--text3:rgba(41,60,71,.40);
+  --border:#E6EAEC;--border2:rgba(0,170,133,.20);
+  --shadow-1:0 1px 2px rgba(18,25,38,.04),0 1px 1px rgba(18,25,38,.03);
+  --shadow-2:0 4px 12px rgba(18,25,38,.07),0 2px 4px rgba(18,25,38,.03);
+  --font-display:'Alexandria',system-ui,sans-serif;
+  --font-body:'Albert Sans',system-ui,sans-serif;
+  --r-card:12px;--r-sm:6px;--r-xs:4px;--r-pill:999px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;-webkit-font-smoothing:antialiased;}
+body{font-family:var(--font-body);background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;font-size:13px;line-height:1.5;}
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+::-webkit-scrollbar-thumb:hover{background:rgba(41,60,71,.25);}
+
+/* HEADER */
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 28px;position:sticky;top:0;z-index:200;}
+.header-top{display:flex;align-items:center;justify-content:space-between;height:52px;}
+.logo-area{display:flex;align-items:center;gap:12px;}
+.logo-sep{width:1px;height:18px;background:var(--border);margin:0 2px;}
+.logo-sub{font-family:var(--font-body);font-size:11px;font-weight:500;color:var(--text3);letter-spacing:.12em;text-transform:uppercase;}
+.header-meta{display:flex;align-items:center;gap:14px;}
+.live-badge{display:flex;align-items:center;gap:5px;font-size:10px;font-weight:600;color:var(--accent);letter-spacing:.06em;text-transform:uppercase;}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.35;transform:scale(.6);}}
+.date-display{font-size:11px;color:var(--text3);}
+.refresh-btn{font-family:var(--font-body);font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text2);background:var(--surface);border:1px solid var(--border);padding:5px 13px;border-radius:var(--r-sm);cursor:pointer;transition:all .15s;}
+.refresh-btn:hover{border-color:var(--accent);color:var(--accent);}
+.refresh-btn.loading{opacity:.5;pointer-events:none;}
+.last-update{font-size:10px;color:var(--text3);}
+
+/* TABS */
+.tabs{display:flex;border-top:1px solid var(--border);}
+.tab-btn{font-family:var(--font-display);font-weight:600;font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--text3);background:transparent;border:none;padding:10px 22px;cursor:pointer;position:relative;transition:color .15s;}
+.tab-btn:hover{color:var(--text2);}
+.tab-btn.active{color:var(--accent);}
+.tab-btn.active::after{content:'';position:absolute;bottom:-1px;left:0;right:0;height:2px;background:var(--accent);border-radius:2px 2px 0 0;}
+
+/* LAYOUT */
+.shell{position:relative;}
+.main{padding:20px 28px;}
+.tab-content{display:none;}
+.tab-content.active{display:block;}
+
+/* SECTION LABEL */
+.section-label{font-family:var(--font-body);font-weight:600;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--text3);margin-bottom:12px;display:flex;align-items:center;gap:10px;}
+.section-label::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* EXEC SUMMARY */
+.exec-summary{padding:14px 28px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;gap:12px;align-items:stretch;flex-wrap:wrap;}
+.exec-card{flex:1;min-width:200px;background:var(--bg);border:1px solid var(--border);border-radius:var(--r-card);padding:14px 18px;display:flex;flex-direction:column;gap:5px;box-shadow:var(--shadow-1);transition:border-color .2s;}
+.exec-card:hover{border-color:rgba(0,170,133,.3);}
+.exec-card.clickable-card{cursor:pointer;}
+.exec-card.salud-active{border-color:var(--accent)!important;box-shadow:0 0 0 1px var(--accent),var(--shadow-2);}
+.exec-card-title{font-family:var(--font-body);font-weight:600;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);display:flex;align-items:center;gap:6px;}
+.exec-card-title .dot{width:6px;height:6px;border-radius:50%;}
+.exec-body{font-size:12px;color:var(--text2);line-height:1.65;}
+.exec-body strong{color:var(--accent);font-weight:700;}
+.exec-body .warn-text{color:var(--warn);font-weight:600;}
+.exec-body .danger-text{color:var(--danger);font-weight:600;}
+.exec-body .muted{color:var(--text3);}
+
+/* ALERT */
+.alert-banner{padding:0 28px;}
+.alert-card{background:rgba(194,138,36,.04);border:1px solid rgba(194,138,36,.2);border-left:3px solid var(--warn);border-radius:var(--r-sm);padding:10px 16px;margin:10px 0;}
+.alert-title{font-family:var(--font-body);font-weight:700;font-size:10px;letter-spacing:.1em;text-transform:uppercase;margin-bottom:3px;display:flex;align-items:center;gap:6px;color:var(--warn);}
+.alert-body{font-size:11px;color:var(--text2);line-height:1.6;}
+.alert-body .hl-warn{color:var(--warn);font-weight:700;}
+.alert-body .hl-muted{color:var(--text3);}
+.dq-tooltip-trigger{cursor:help;position:relative;}
+.dq-tooltip{display:none;position:absolute;left:0;top:100%;z-index:500;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);padding:12px 16px;min-width:280px;max-height:260px;overflow-y:auto;box-shadow:var(--shadow-2);margin-top:4px;font-size:11px;line-height:1.8;}
+.dq-tooltip.visible{display:block;animation:fadeUp .2s ease both;}
+.dq-tooltip-item{display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid var(--border);padding:2px 0;}
+
+/* FILTERS */
+.filters-bar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;align-items:center;}
+.filter-group{position:relative;}
+.filter-select{font-family:var(--font-body);font-size:11px;color:var(--text2);background:var(--surface);border:1px solid var(--border);padding:6px 26px 6px 11px;cursor:pointer;appearance:none;min-width:120px;transition:border-color .15s;border-radius:var(--r-sm);}
+.filter-select:hover,.filter-select:focus{border-color:rgba(0,170,133,.45);color:var(--text);outline:none;}
+.filter-group::after{content:'▾';position:absolute;right:9px;top:50%;transform:translateY(-50%);font-size:8px;color:var(--text3);pointer-events:none;}
+.filter-reset{font-family:var(--font-body);font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);background:transparent;border:1px dashed var(--border);padding:6px 12px;cursor:pointer;transition:all .15s;border-radius:var(--r-sm);}
+.filter-reset:hover{border-color:var(--danger);color:var(--danger);}
+.filter-search-wrap{position:relative;}
+.filter-search{font-family:var(--font-body);font-size:11px;color:var(--text2);background:var(--surface);border:1px solid var(--border);padding:6px 11px;min-width:160px;transition:border-color .15s;border-radius:var(--r-sm);}
+.filter-search:hover,.filter-search:focus{border-color:rgba(0,170,133,.45);color:var(--text);outline:none;}
+.ms-dropdown{position:relative;display:inline-block;}
+.ms-toggle{font-family:var(--font-body);font-size:11px;color:var(--text2);background:var(--surface);border:1px solid var(--border);padding:6px 26px 6px 11px;cursor:pointer;min-width:120px;transition:border-color .15s;border-radius:var(--r-sm);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;user-select:none;}
+.ms-toggle:hover,.ms-toggle.open{border-color:rgba(0,170,133,.45);color:var(--text);}
+.ms-toggle::after{content:'▾';position:absolute;right:9px;top:50%;transform:translateY(-50%);font-size:8px;color:var(--text3);pointer-events:none;}
+.ms-toggle.has-selection{color:var(--accent);border-color:var(--border2);}
+.ms-panel{display:none;position:absolute;top:100%;left:0;z-index:200;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-sm);min-width:180px;max-height:220px;overflow-y:auto;box-shadow:var(--shadow-2);margin-top:3px;}
+.ms-panel.open{display:block;}
+.ms-panel label{display:flex;align-items:center;gap:8px;padding:7px 13px;font-size:11px;color:var(--text2);cursor:pointer;transition:background .12s;}
+.ms-panel label:hover{background:var(--accent-dim);color:var(--text);}
+.ms-panel input[type="checkbox"]{accent-color:var(--accent);width:12px;height:12px;cursor:pointer;}
+.chart-filter-chip{display:inline-flex;align-items:center;gap:5px;font-family:var(--font-body);font-size:10px;font-weight:600;letter-spacing:.06em;color:var(--accent);background:var(--accent-dim);border:1px solid rgba(0,170,133,.3);padding:4px 10px;border-radius:var(--r-pill);cursor:pointer;transition:all .15s;text-transform:uppercase;}
+.chart-filter-chip:hover{background:rgba(0,170,133,.15);}
+
+/* KPI CARDS */
+.kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:20px;}
+.kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-card);padding:16px 18px;position:relative;overflow:hidden;transition:border-color .15s,transform .15s,box-shadow .15s;box-shadow:var(--shadow-1);}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
+.kpi-card.c-danger::before{background:var(--danger);}
+.kpi-card.c-warn::before{background:var(--warn);}
+.kpi-card.c-pending::before{background:var(--pending);}
+.kpi-card.c-accent::before{background:var(--accent);}
+.kpi-card.c-neutral::before{background:rgba(41,60,71,.12);}
+.kpi-card.c-spi::before{background:#7C5CBF;}
+.kpi-card:hover{border-color:rgba(0,170,133,.3);}
+.kpi-clickable{cursor:pointer;}
+.kpi-clickable:hover{transform:translateY(-2px);box-shadow:var(--shadow-2);}
+.kpi-clickable.active-filter{border-color:var(--accent)!important;box-shadow:0 0 0 1px var(--accent),var(--shadow-2);}
+.kpi-label{font-family:var(--font-body);font-weight:500;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);margin-bottom:6px;}
+.kpi-value{font-family:var(--font-display);font-weight:300;font-size:36px;line-height:1;letter-spacing:-.02em;margin-bottom:3px;color:var(--text);}
+.kpi-card.c-danger .kpi-value{color:var(--danger);}
+.kpi-card.c-warn .kpi-value{color:var(--warn);}
+.kpi-card.c-pending .kpi-value{color:var(--pending);}
+.kpi-card.c-accent .kpi-value{color:var(--accent);}
+.kpi-card.c-spi .kpi-value{color:#7C5CBF;}
+.kpi-sub{font-size:11px;color:var(--text3);}
+
+/* CHARTS */
+.charts-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px;}
+.charts-row-4{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:12px;margin-bottom:18px;}
+.charts-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:18px;}
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-card);padding:16px 18px;box-shadow:var(--shadow-1);}
+.chart-card.span2{grid-column:span 2;}
+.chart-title{font-family:var(--font-display);font-weight:600;font-size:14px;margin-bottom:2px;color:var(--text);letter-spacing:-.005em;}
+.chart-desc{font-size:11px;color:var(--text3);margin-bottom:12px;}
+.chart-wrapper{position:relative;width:100%;}
+.chart-wrapper canvas{width:100%!important;}
+canvas{cursor:pointer;}
+
+/* TABLE */
+.table-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-card);overflow:hidden;box-shadow:var(--shadow-1);}
+.table-header{padding:12px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.table-title{font-family:var(--font-display);font-weight:600;font-size:14px;color:var(--text);}
+.table-count{font-size:11px;color:var(--text3);margin-left:6px;}
+.table-scroll{overflow-x:auto;max-height:380px;overflow-y:auto;}
+.data-table{width:100%;border-collapse:collapse;font-size:12px;}
+.data-table th{padding:9px 12px;text-align:left;font-family:var(--font-body);font-weight:600;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);border-bottom:1px solid var(--border);white-space:nowrap;background:var(--surface2);position:sticky;top:0;cursor:pointer;user-select:none;transition:color .12s;z-index:2;}
+.data-table th:hover{color:var(--accent);}
+.data-table th.sorted{color:var(--accent);}
+.data-table th .sort-arrow{margin-left:3px;font-size:8px;}
+.data-table td{padding:8px 12px;border-bottom:1px solid var(--border);white-space:nowrap;color:var(--text);font-size:11px;overflow:hidden;text-overflow:ellipsis;}
+.data-table tr:hover td{background:var(--accent-dim);}
+.proj-id{font-family:var(--font-display);font-weight:700;color:var(--accent);font-size:11px;}
+.mini-badge{font-size:10px;padding:2px 8px;display:inline-block;min-width:22px;text-align:center;border-radius:var(--r-pill);}
+.badge-danger{background:rgba(184,58,58,.10);color:var(--danger);border:1px solid rgba(184,58,58,.2);}
+.badge-warn{background:rgba(194,138,36,.10);color:var(--warn);border:1px solid rgba(194,138,36,.2);}
+.badge-pending{background:rgba(61,125,128,.10);color:var(--pending);border:1px solid rgba(61,125,128,.2);}
+.badge-accent{background:rgba(0,170,133,.10);color:#006C53;border:1px solid rgba(0,170,133,.25);}
+.progress-cell{display:flex;align-items:center;gap:6px;}
+.mini-bar{width:48px;height:3px;background:var(--border);position:relative;overflow:hidden;border-radius:var(--r-pill);}
+.mini-bar-fill{height:100%;background:var(--accent);position:absolute;left:0;top:0;}
+.progress-pct{font-size:10px;color:var(--text3);min-width:28px;}
+.spi-indicator{display:inline-flex;align-items:center;gap:4px;}
+.spi-dot{width:7px;height:7px;border-radius:50%;}
+.spi-good{background:var(--accent);}
+.spi-warn{background:var(--warn);}
+.spi-bad{background:var(--danger);}
+.data-table tr.clickable-row{cursor:pointer;}
+.data-table tr.clickable-row:hover td{background:var(--accent-dim);}
+.data-table tr.row-expanded td{background:rgba(0,170,133,.04);border-bottom-color:transparent;}
+.detail-row td{padding:0!important;border-bottom:1px solid var(--border)!important;background:var(--surface2)!important;}
+.detail-content{padding:14px 18px;animation:fadeUp .25s ease both;}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.detail-hitos-title{font-family:var(--font-display);font-weight:600;font-size:11px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:10px;}
+.hito-detail-row{display:grid;grid-template-columns:180px 1fr 90px;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border);font-size:10px;}
+.hito-detail-row:last-child{border-bottom:none;}
+.hito-name-d{color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.hito-timeline{height:4px;background:var(--border);position:relative;border-radius:var(--r-pill);overflow:hidden;}
+.hito-timeline .bar-real{position:absolute;left:0;top:0;height:100%;border-radius:var(--r-pill);}
+.hito-status-d{text-align:right;}
+.cuenta-expand-icon{display:inline-block;width:14px;font-size:9px;color:var(--text3);transition:transform .2s;}
+.cuenta-row-parent{cursor:pointer;}
+.cuenta-row-parent:hover td{background:var(--accent-dim);}
+.cuenta-child-row td{background:var(--surface2)!important;}
+.comment-cell{white-space:normal!important;max-width:200px;word-wrap:break-word;line-height:1.4;}
+
+/* TAB 3 */
+.crono-corte-badge{display:inline-flex;align-items:center;gap:8px;font-family:var(--font-body);font-size:11px;font-weight:600;color:var(--text);background:var(--surface);border:1px solid var(--border);padding:7px 16px;border-radius:var(--r-sm);margin-bottom:16px;box-shadow:var(--shadow-1);}
+.crono-corte-badge .corte-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);}
+.crono-corte-badge .corte-label{font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--text3);}
+.crono-kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:18px;}
+.gantt-controls{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap;}
+.gantt-search{font-family:var(--font-body);font-size:11px;color:var(--text);background:var(--surface);border:1px solid var(--border);padding:6px 12px;min-width:200px;border-radius:var(--r-sm);}
+.gantt-search:focus{border-color:rgba(0,170,133,.45);outline:none;}
+.gantt-zoom,.gantt-sort{font-family:var(--font-body);font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);background:var(--surface);border:1px solid var(--border);padding:5px 13px;cursor:pointer;border-radius:var(--r-sm);transition:all .15s;}
+.gantt-zoom:hover,.gantt-sort:hover{border-color:rgba(0,170,133,.4);color:var(--text2);}
+.gantt-zoom.active,.gantt-sort.active{color:var(--accent);border-color:rgba(0,170,133,.35);background:var(--accent-dim);}
+.gantt-container{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-card);overflow-x:auto;overflow-y:auto;max-height:480px;position:relative;box-shadow:var(--shadow-1);}
+.gantt-table{border-collapse:collapse;width:max-content;min-width:100%;}
+.gantt-table thead th{position:sticky;top:0;z-index:3;background:var(--surface2);font-family:var(--font-body);font-weight:600;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);padding:6px 3px;border-bottom:1px solid var(--border);text-align:center;white-space:nowrap;}
+.gantt-table thead th.gantt-label-col{position:sticky;left:0;z-index:4;background:var(--surface2);text-align:left;padding-left:12px;min-width:180px;}
+.gantt-table tbody td{padding:0;height:26px;border-bottom:1px solid rgba(41,60,71,.05);position:relative;}
+.gantt-table tbody td.gantt-label-cell{position:sticky;left:0;z-index:2;background:var(--surface);padding:4px 12px;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px;}
+.gantt-month-sep{border-left:1px solid var(--border);}
+.gantt-today{position:absolute;top:0;bottom:0;width:2px;background:var(--danger);z-index:1;opacity:.5;pointer-events:none;}
+.gantt-bar{position:absolute;top:5px;height:16px;border-radius:3px;min-width:2px;cursor:pointer;}
+.gantt-bar:hover{filter:brightness(1.08);z-index:5;}
+.gantt-bar-plan{top:7px;height:12px;border:1.5px dashed;opacity:.45;}
+.gantt-bar-done{opacity:.3!important;}
+.gantt-bar-hito{width:8px;height:8px;top:9px;border-radius:50%;border:1.5px solid #fff;margin-left:-4px;z-index:2;}
+.gantt-tooltip-box{position:fixed;z-index:9999;background:var(--text);border-radius:var(--r-sm);padding:9px 13px;font-size:11px;color:rgba(255,255,255,.9);pointer-events:none;max-width:280px;line-height:1.6;box-shadow:var(--shadow-2);}
+.scatter-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-card);padding:16px 18px;box-shadow:var(--shadow-1);}
+.forecast-table{width:100%;border-collapse:collapse;font-size:11px;}
+.forecast-table th{padding:8px 10px;text-align:left;font-family:var(--font-body);font-weight:600;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);border-bottom:1px solid var(--border);background:var(--surface2);position:sticky;top:0;z-index:2;cursor:pointer;user-select:none;white-space:nowrap;transition:color .12s;}
+.forecast-table th:hover{color:var(--accent);}
+.forecast-table td{padding:7px 10px;border-bottom:1px solid var(--border);color:var(--text);}
+.forecast-table tr:hover td{background:var(--accent-dim);}
+.desv-badge{font-size:10px;padding:2px 8px;border-radius:var(--r-pill);font-weight:600;display:inline-block;min-width:44px;text-align:center;}
+.desv-critico{background:rgba(184,58,58,.10);color:var(--danger);border:1px solid rgba(184,58,58,.2);}
+.desv-alto{background:rgba(194,138,36,.10);color:var(--warn);border:1px solid rgba(194,138,36,.2);}
+.desv-moderado{background:rgba(61,125,128,.10);color:var(--pending);border:1px solid rgba(61,125,128,.2);}
+.desv-control{background:rgba(0,170,133,.10);color:#006C53;border:1px solid rgba(0,170,133,.2);}
+.intercon-check{display:inline-block;width:18px;height:18px;line-height:18px;text-align:center;border-radius:var(--r-xs);font-size:10px;font-weight:700;}
+.intercon-ok{background:rgba(0,170,133,.12);color:#006C53;}
+.intercon-no{background:rgba(184,58,58,.12);color:var(--danger);}
+
+/* TAB 4 */
+.insights-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:8px;}
+.insights-timestamp-badge{display:inline-flex;align-items:center;gap:7px;font-family:var(--font-body);font-size:11px;font-weight:600;color:var(--text);background:var(--surface);border:1px solid var(--border);padding:7px 14px;border-radius:var(--r-sm);box-shadow:var(--shadow-1);}
+.insights-timestamp-badge .ts-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);}
+.insights-timestamp-badge .ts-label{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);}
+.insights-section-title{font-family:var(--font-display);font-weight:600;font-size:12px;letter-spacing:.06em;text-transform:uppercase;margin:20px 0 12px;display:flex;align-items:center;gap:8px;}
+.insights-section-title .section-dot{width:8px;height:8px;border-radius:50%;}
+.insights-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:14px;}
+.insight-card{background:var(--surface);border-radius:var(--r-card);padding:18px 20px;border:1px solid var(--border);transition:border-color .15s,transform .12s,box-shadow .12s;box-shadow:var(--shadow-1);}
+.insight-card:hover{transform:translateY(-2px);box-shadow:var(--shadow-2);}
+.insight-card.card-negativo{border-left:3px solid var(--danger);}
+.insight-card.card-positivo{border-left:3px solid var(--accent);}
+.insight-card.card-informativo{border-left:3px solid var(--pending);}
+.insight-tipo-badge{font-family:var(--font-body);font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;padding:3px 9px;border-radius:var(--r-pill);display:inline-block;margin-bottom:10px;}
+.badge-negativo{background:rgba(184,58,58,.10);color:var(--danger);border:1px solid rgba(184,58,58,.2);}
+.badge-positivo{background:rgba(0,170,133,.10);color:#006C53;border:1px solid rgba(0,170,133,.25);}
+.badge-informativo{background:rgba(61,125,128,.10);color:var(--pending);border:1px solid rgba(61,125,128,.2);}
+.insight-titulo{font-family:var(--font-display);font-weight:600;font-size:14px;color:var(--text);margin-bottom:12px;line-height:1.3;}
+.insight-section-label{font-family:var(--font-body);font-size:9px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);margin-bottom:3px;margin-top:10px;}
+.insight-section-label:first-of-type{margin-top:0;}
+.insight-text{font-size:12px;color:var(--text2);line-height:1.6;}
+.insight-text.text-evidencia{color:var(--text3);font-size:11px;}
+.insight-text.text-recomendacion{color:#006C53;font-size:12px;font-weight:600;}
+.insights-empty{text-align:center;padding:60px 20px;color:var(--text3);font-size:13px;line-height:1.8;}
+
+/* LOADING */
+.loading-overlay{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:1000;transition:opacity .4s;}
+.loading-overlay.hidden{opacity:0;pointer-events:none;}
+.loading-spinner{text-align:center;}
+.loading-bar{width:100px;height:2px;background:var(--border);margin:16px auto 0;overflow:hidden;position:relative;border-radius:var(--r-pill);}
+.loading-bar::after{content:'';position:absolute;width:36px;height:100%;background:var(--accent);animation:loadSlide 1s ease infinite;}
+@keyframes loadSlide{0%{left:-36px;}100%{left:100px;}}
+.loading-text{font-family:var(--font-body);font-size:10px;color:var(--text3);letter-spacing:.18em;text-transform:uppercase;margin-top:12px;}
+.treemap-block{cursor:pointer;transition:filter .15s;border-radius:8px!important;}
+.treemap-block:hover{filter:brightness(.96);}
+.treemap-block.active{outline:2px solid var(--accent);outline-offset:-2px;}
+
+footer{padding:12px 28px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;font-size:10px;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;background:var(--surface);}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+.animate-in{animation:fadeUp .3s ease both;}
+@media(max-width:1100px){.kpi-grid{grid-template-columns:repeat(3,1fr);}.charts-row-4{grid-template-columns:1fr 1fr;}.charts-row-3{grid-template-columns:1fr 1fr;}.crono-kpi-grid{grid-template-columns:repeat(3,1fr);}}
+@media(max-width:900px){.charts-row,.charts-row-4,.charts-row-3{grid-template-columns:1fr;}.kpi-grid{grid-template-columns:repeat(2,1fr);}.main,header,footer{padding-left:16px;padding-right:16px;}}
+</style>
+</helmet>
+
+<!-- Loading overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-spinner">
+    <img src="assets/logo-enlight-dark.svg" alt="Enlight" style="height:32px;width:auto;display:block;margin:0 auto;">
+    <div class="loading-bar"></div>
+    <div class="loading-text">Cargando datos…</div>
+  </div>
+</div>
+
+<div class="shell">
+  <header>
+    <div class="header-top">
+      <div class="logo-area">
+        <img src="assets/logo-enlight-dark.svg" alt="Enlight" style="height:26px;width:auto;display:block;">
+        <div class="logo-sep"></div>
+        <span class="logo-sub">Panel de Control · Proyectos</span>
+      </div>
+      <div class="header-meta">
+        <div class="live-badge"><span class="live-dot"></span>En vivo</div>
+        <div class="date-display" id="fechaHoy"></div>
+        <button class="refresh-btn" id="btnRefresh" onclick="fetchData()">↻ Actualizar</button>
+        <span class="last-update" id="lastUpdate"></span>
+      </div>
+    </div>
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="tab1">Estado General</button>
+      <button class="tab-btn" data-tab="tab2">Rendimiento y Desviaciones</button>
+      <button class="tab-btn" data-tab="tab3">Cronograma y Pronóstico</button>
+      <button class="tab-btn" data-tab="tab4">Insights IA</button>
+    </div>
+  </header>
+
+  <div class="exec-summary" id="execSummary"></div>
+  <div class="alert-banner" id="alertBanner"></div>
+
+  <div class="main">
+
+    <!-- TAB 1 -->
+    <div class="tab-content active" id="tab1">
+      <div class="filters-bar" id="filtersBar"></div>
+      <div class="section-label">Resumen general</div>
+      <div class="kpi-grid" id="kpiGrid"></div>
+      <div class="section-label">Distribución del portafolio</div>
+      <div class="charts-row-4">
+        <div class="chart-card span2">
+          <div class="chart-title">Estatus por hito</div>
+          <div class="chart-desc">Distribución acumulada de cada hito</div>
+          <div class="chart-wrapper" style="height:260px"><canvas id="chartHitos"></canvas></div>
+          <div id="hitosDetailPanel"></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Por fase</div>
+          <div class="chart-desc">Distribución actual</div>
+          <div class="chart-wrapper" style="height:220px"><canvas id="chartFases"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Por tipo</div>
+          <div class="chart-desc">Financiamiento / CAPEX</div>
+          <div class="chart-wrapper" style="height:220px"><canvas id="chartTipo"></canvas></div>
+        </div>
+      </div>
+      <div class="charts-row-3">
+        <div class="chart-card">
+          <div class="chart-title">Por Project Manager</div>
+          <div class="chart-desc">Proyectos asignados</div>
+          <div class="chart-wrapper" style="height:170px"><canvas id="chartPM"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Por proveeduría</div>
+          <div class="chart-desc">Tipo de EPC</div>
+          <div class="chart-wrapper" style="height:170px"><canvas id="chartProv"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Por cuenta</div>
+          <div class="chart-desc">Top cuentas por proyectos</div>
+          <div class="chart-wrapper" style="height:170px"><canvas id="chartCuenta"></canvas></div>
+        </div>
+      </div>
+      <div class="charts-row">
+        <div class="chart-card">
+          <div class="chart-title">Por entidad federativa</div>
+          <div class="chart-desc">Distribución geográfica</div>
+          <div class="chart-wrapper" style="height:170px"><canvas id="chartEntidad"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Rendimiento por subcontratista</div>
+          <div class="chart-desc">% hitos a tiempo vs total evaluados</div>
+          <div class="chart-wrapper" style="height:170px"><canvas id="chartSubcontratista"></canvas></div>
+        </div>
+      </div>
+      <div class="section-label">Detalle de proyectos</div>
+      <div class="table-card">
+        <div class="table-header">
+          <div style="display:flex;align-items:baseline;gap:6px;">
+            <div class="table-title">Todos los proyectos</div>
+            <span class="table-count" id="tableCount"></span>
+          </div>
+        </div>
+        <div class="table-scroll">
+          <table class="data-table" id="projectTable">
+            <thead><tr>
+              <th data-sort="proj">PROJ <span class="sort-arrow"></span></th>
+              <th data-sort="sitio">Sitio <span class="sort-arrow"></span></th>
+              <th data-sort="cuenta">Cuenta <span class="sort-arrow"></span></th>
+              <th data-sort="pm">PM <span class="sort-arrow"></span></th>
+              <th data-sort="tipo">Tipo <span class="sort-arrow"></span></th>
+              <th data-sort="tecnologia">Tecno <span class="sort-arrow"></span></th>
+              <th data-sort="potenciaFV">kWp SFV <span class="sort-arrow"></span></th>
+              <th data-sort="potenciaSTO">kW SAE <span class="sort-arrow"></span></th>
+              <th data-sort="pctProyecto">% Proy <span class="sort-arrow"></span></th>
+              <th data-sort="faseActual">Fase <span class="sort-arrow"></span></th>
+              <th data-sort="spi">SPI <span class="sort-arrow"></span></th>
+              <th data-sort="atrasados">Atr <span class="sort-arrow"></span></th>
+              <th data-sort="pendientes">Pend <span class="sort-arrow"></span></th>
+              <th data-sort="conRetraso">Ret <span class="sort-arrow"></span></th>
+              <th data-sort="aTiempo">OK <span class="sort-arrow"></span></th>
+            </tr></thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2 -->
+    <div class="tab-content" id="tab2">
+      <div class="filters-bar" id="filtersBar2"></div>
+      <div class="section-label">Indicadores de rendimiento</div>
+      <div class="kpi-grid" id="kpiGrid2" style="grid-template-columns:repeat(4,1fr);"></div>
+      <div class="section-label">Análisis de desviaciones</div>
+      <div class="charts-row">
+        <div class="chart-card">
+          <div class="chart-title">Desviación neta promedio por hito (días)</div>
+          <div class="chart-desc">Descontando días On Hold · mayor desviación respecto a fecha base</div>
+          <div class="chart-wrapper" style="height:260px"><canvas id="chartDesviacion"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Rendimiento por cuenta</div>
+          <div class="chart-desc">% hitos a tiempo vs proyectos por cuenta</div>
+          <div class="chart-wrapper" style="height:260px"><canvas id="chartRendPM"></canvas></div>
+        </div>
+      </div>
+      <div class="charts-row">
+        <div class="chart-card">
+          <div class="chart-title">Proyectos por fase</div>
+          <div class="chart-desc">Proporción del portafolio</div>
+          <div class="chart-wrapper" id="treemapContainer" style="min-height:200px;"></div>
+          <div id="treemapDetailTable"></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Hitos a tiempo por cuenta</div>
+          <div class="chart-desc">% cumplimiento a tiempo</div>
+          <div class="chart-wrapper" style="height:220px"><canvas id="chartCuentaRendimiento"></canvas></div>
+        </div>
+      </div>
+      <div class="section-label">Detalle por Cuenta</div>
+      <div class="table-card">
+        <div class="table-header"><div class="table-title">Resumen por Cuenta</div></div>
+        <div class="table-scroll" style="max-height:420px;">
+          <table class="data-table" id="cuentaTable">
+            <thead><tr>
+              <th style="width:18px;"></th>
+              <th>Cuenta</th>
+              <th class="sortable-cta" data-sort="n">Proyectos <span class="sort-arrow"></span></th>
+              <th>Evaluados</th>
+              <th class="sortable-cta" data-sort="at">A tiempo <span class="sort-arrow"></span></th>
+              <th class="sortable-cta" data-sort="cr">Retraso <span class="sort-arrow"></span></th>
+              <th class="sortable-cta" data-sort="atr">Atrasados <span class="sort-arrow"></span></th>
+              <th>Pend.</th>
+              <th class="sortable-cta" data-sort="pct">% A tiempo <span class="sort-arrow"></span></th>
+              <th class="sortable-cta" data-sort="spi">SPI <span class="sort-arrow"></span></th>
+            </tr></thead>
+            <tbody id="cuentaTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3 -->
+    <div class="tab-content" id="tab3">
+      <div id="cronoCorte" class="crono-corte-badge">
+        <span class="corte-dot"></span>
+        <span class="corte-label">Pronóstico al:</span>
+        <span id="cronoCorteDate">—</span>
+      </div>
+      <div class="filters-bar" id="filtersBar3"></div>
+      <div class="section-label">Resumen de pronóstico</div>
+      <div class="crono-kpi-grid" id="cronoKpiGrid"></div>
+      <div class="section-label">Gantt del portafolio</div>
+      <div class="gantt-controls">
+        <input type="text" class="gantt-search" id="ganttSearch" placeholder="Buscar proyecto o cuenta…">
+        <button class="gantt-sort active" data-gsort="commissioning" onclick="setGanttSort('commissioning')">Por commissioning</button>
+        <button class="gantt-sort" data-gsort="inicio" onclick="setGanttSort('inicio')">Por inicio</button>
+        <span style="width:1px;height:16px;background:var(--border);margin:0 2px;"></span>
+        <button class="gantt-zoom active" data-zoom="month" onclick="setGanttZoom('month')">Mes</button>
+        <button class="gantt-zoom" data-zoom="quarter" onclick="setGanttZoom('quarter')">Trim</button>
+        <button class="gantt-zoom" data-zoom="year" onclick="setGanttZoom('year')">Año</button>
+        <span style="margin-left:auto;font-size:9px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;display:flex;align-items:center;gap:12px;">
+          <span><span style="display:inline-block;width:12px;height:4px;background:var(--accent);border-radius:2px;vertical-align:middle;margin-right:4px;opacity:.7;"></span>Real</span>
+          <span><span style="display:inline-block;width:12px;height:4px;border:1.5px dashed var(--text3);border-radius:2px;vertical-align:middle;margin-right:4px;"></span>Plan</span>
+        </span>
+      </div>
+      <div class="gantt-container" id="ganttContainer"></div>
+      <div class="section-label" style="margin-top:18px;">Análisis de dispersión</div>
+      <div class="charts-row">
+        <div class="scatter-card">
+          <div class="chart-title">Desviación vs avance de pronóstico</div>
+          <div class="chart-desc">Burbuja = proyecto · tamaño = semanas · verde = ideal, rojo = crítico</div>
+          <div class="chart-wrapper" style="height:300px"><canvas id="chartScatterCrono"></canvas></div>
+        </div>
+        <div class="scatter-card">
+          <div class="chart-title">Ratio de sobre-plazo</div>
+          <div class="chart-desc">Sem. real / sem. esperada · línea verde = sin desviación (1.0)</div>
+          <div class="chart-wrapper" style="height:300px"><canvas id="chartRatioSobrePlazo"></canvas></div>
+        </div>
+      </div>
+      <div class="section-label" style="margin-top:18px;">Detalle de pronósticos</div>
+      <div class="table-card">
+        <div class="table-header">
+          <div style="display:flex;align-items:baseline;gap:6px;">
+            <div class="table-title">Fechas y pronósticos</div>
+            <span class="table-count" id="forecastTableCount"></span>
+          </div>
+        </div>
+        <div class="table-scroll" style="max-height:400px;">
+          <table class="forecast-table" id="forecastTable">
+            <thead><tr>
+              <th data-fsort="proj">PROJ</th>
+              <th data-fsort="cuenta">Cuenta</th>
+              <th data-fsort="pm">PM</th>
+              <th data-fsort="faseActual">Fase</th>
+              <th data-fsort="pctPronostico">% Pron</th>
+              <th data-fsort="fechaInicio">Inicio</th>
+              <th data-fsort="fechaFin">Fin pron.</th>
+              <th data-fsort="previstaCommissioning">Comm. prev.</th>
+              <th data-fsort="diasDesviacion">Desv.</th>
+              <th data-fsort="semanasEsperadas">Sem. esp.</th>
+              <th data-fsort="semanaActual">Sem. real</th>
+              <th data-fsort="ratio">Ratio</th>
+              <th>Interc.</th>
+            </tr></thead>
+            <tbody id="forecastTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4 -->
+    <div class="tab-content" id="tab4">
+      <div class="insights-header">
+        <div class="insights-timestamp-badge">
+          <span class="ts-dot"></span>
+          <span class="ts-label">Último análisis IA</span>
+          <span id="insightsTimestamp">—</span>
+        </div>
+      </div>
+      <div id="insightsContainer">
+        <div class="insights-empty">
+          <div style="font-size:32px;margin-bottom:12px;opacity:.25;">◇</div>
+          Cargando insights…
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /main -->
+
+  <footer>
+    <span style="display:flex;align-items:center;gap:8px;"><img src="assets/logo-enlight-dark.svg" alt="Enlight" style="height:16px;width:auto;vertical-align:middle;opacity:.6;"> Dashboard Proyectos</span>
+    <span>Portafolio SFV · SAE · Microrredes · Dirección General</span>
+  </footer>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  componentDidMount() {
+    if (typeof window.dashboardInit === 'function') {
+      window.dashboardInit();
+    } else {
+      // Wait for script to load
+      const t = setInterval(() => {
+        if (typeof window.dashboardInit === 'function') {
+          clearInterval(t);
+          window.dashboardInit();
+        }
+      }, 50);
+    }
+  }
+}
+
+</script>
+</body>
+</html>

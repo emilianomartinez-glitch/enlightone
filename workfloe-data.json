@@ -1,0 +1,373 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "path": "enlight-dashboard",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "6cca48cc-88b3-4277-98bc-d6f6bbad829f",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -176,
+        288
+      ],
+      "webhookId": "7d13e22a-1f02-443f-98cf-446f4c353e73"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1_RJ65-rmI3mJwHx4Eg8U6-QY7xlGuHNn45EfpCqRJQQ",
+          "mode": "list",
+          "cachedResultName": "Enlight One Database_Esquema 2026",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1_RJ65-rmI3mJwHx4Eg8U6-QY7xlGuHNn45EfpCqRJQQ/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Dashboard",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1_RJ65-rmI3mJwHx4Eg8U6-QY7xlGuHNn45EfpCqRJQQ/edit#gid=0"
+        },
+        "options": {}
+      },
+      "id": "37189e1f-d44a-400a-ba1c-2884e1c7258b",
+      "name": "Leer Dashboard",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        48,
+        288
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "af48hEP1PbQpWRo9",
+          "name": "Google Sheets account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1_RJ65-rmI3mJwHx4Eg8U6-QY7xlGuHNn45EfpCqRJQQ",
+          "mode": "list",
+          "cachedResultName": "Enlight One Database_Esquema 2026",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1_RJ65-rmI3mJwHx4Eg8U6-QY7xlGuHNn45EfpCqRJQQ/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1915245543,
+          "mode": "list",
+          "cachedResultName": "Desviaciones",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1_RJ65-rmI3mJwHx4Eg8U6-QY7xlGuHNn45EfpCqRJQQ/edit#gid=1915245543"
+        },
+        "options": {}
+      },
+      "id": "c6a971c6-89f0-4adc-a93a-b94aa07b35eb",
+      "name": "Leer Desviaciones",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [
+        48,
+        672
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "af48hEP1PbQpWRo9",
+          "name": "Google Sheets account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const dashboardItems = $('Leer Dashboard').all();\nconst desviacionesItems = $('Leer Desviaciones').all();\nconst dashboard = dashboardItems.map(i => i.json);\nconst desviacionesRaw = desviacionesItems.map(i => i.json);\nconst today = new Date();\ntoday.setHours(0, 0, 0, 0);\nconst fpRaw = $('Fecha pronóstico').first().json;\nconst fechaCortePronostico = Object.keys(fpRaw).find(k => k !== 'row_number') || null;\n\n// ─── UTILIDADES ──────────────────────────────────────────────────\n\nfunction parseDate(val) {\n  if (!val || val === '' || val === 'null' || val === 'None') return null;\n  const s = String(val).trim();\n  \n  // Handle DD/MM/YYYY or D/M/YYYY format (Google Sheets español)\n  const slashParts = s.match(/^(\\d{1,2})\\/(\\d{1,2})\\/(\\d{4})$/);\n  if (slashParts) {\n    const day = parseInt(slashParts[1], 10);\n    const month = parseInt(slashParts[2], 10) - 1;\n    const year = parseInt(slashParts[3], 10);\n    const d = new Date(year, month, day);\n    return isNaN(d.getTime()) ? null : d;\n  }\n  \n  const d = new Date(s);\n  return isNaN(d.getTime()) ? null : d;\n}\n\nfunction formatDate(val) {\n  const d = parseDate(val);\n  if (!d) return null;\n  const yyyy = d.getFullYear();\n  const mm = String(d.getMonth() + 1).padStart(2, '0');\n  const dd = String(d.getDate()).padStart(2, '0');\n  return `${yyyy}-${mm}-${dd}`;\n}\n\nfunction daysDiff(d1, d2) {\n  if (!d1 || !d2) return null;\n  const a = parseDate(d1);\n  const b = parseDate(d2);\n  if (!a || !b) return null;\n  return Math.round((b - a) / (1000 * 60 * 60 * 24));\n}\n\n// ─── NUEVA LÓGICA DE ESTATUS ─────────────────────────────────────\n// Referencia = tentativa si existe, si no prevista\n// Modificada = fecha de cumplimiento real (la que el PM registra)\n//\n// Sin modificada:\n//   - Sin referencia → null (no evaluable)\n//   - Referencia ya pasó → Atrasado\n//   - Referencia no ha llegado → Pendiente\n//\n// Con modificada:\n//   - Modificada ≤ referencia → Cumplido a tiempo\n//   - Modificada > referencia → Cumplido con retraso\n\nfunction calcEstatus(fechaPrevista, fechaTentativa, fechaModificada) {\n  const fp = parseDate(fechaPrevista);\n  const ft = parseDate(fechaTentativa);\n  const fm = parseDate(fechaModificada);\n\n  // Referencia: tentativa si existe, si no prevista\n  const ref = ft || fp;\n  if (!ref) return null; // Sin ninguna fecha de referencia → no evaluable\n\n  if (!fm) {\n    // No se ha cumplido → comparar referencia contra hoy\n    return ref < today ? 'Atrasado' : 'Pendiente';\n  }\n\n  // Se cumplió → comparar modificada contra referencia\n  return fm <= ref ? 'Cumplido a tiempo' : 'Cumplido con retraso';\n}\n\n// ─── LIMPIEZA DE DATOS SUCIOS ────────────────────────────────────\n\nconst DIRTY_VALUES = [\n  'No encontrado',\n  'No encontrado en STO',\n  'No existe KAM en scoop',\n  'No encontrado en FV',\n  'Reintentando...',\n  'No localizado',\n  'None',\n  'null',\n  'undefined',\n  '#REF!',\n  '#N/A',\n  '#VALUE!',\n  'N/A',\n];\n\nconst ENTIDAD_MAP = {\n  'State of Mexico': 'Estado de México',\n  'Estado de Mexico': 'Estado de México',\n  'San Luis Potosi': 'San Luis Potosí',\n  'Queretaro': 'Querétaro',\n  'Nuevo Leon': 'Nuevo León',\n  'Yucatan': 'Yucatán',\n  'Mexico City': 'CDMX',\n  'Ciudad de Mexico': 'CDMX',\n  'Ciudad de México': 'CDMX',\n};\n\nfunction clean(val) {\n  if (val === null || val === undefined) return '';\n  const s = String(val).trim();\n  if (DIRTY_VALUES.includes(s) || s === '') return '';\n  return s;\n}\n\nfunction cleanEntidad(val) {\n  const s = clean(val);\n  if (!s) return '';\n  return ENTIDAD_MAP[s] || s;\n}\n\nfunction cleanNum(val) {\n  if (val === null || val === undefined || val === '') return '';\n  const s = clean(val);\n  if (!s) return '';\n  const n = parseFloat(s);\n  return isNaN(n) ? '' : String(n);\n}\n\n// ─── DEFINICIÓN DE HITOS ─────────────────────────────────────────\n\nconst HITOS = [\n  {\n    nombre: 'Entrega Ingenierías',\n    prevista: 'Fecha prevista entrega ingenierías',\n    tentativa: 'Fecha tentativa entrega ingenierías',\n    modificada: 'Fecha modificada entrega ingenierías',\n    real: 'Fecha entrega ingenierías',\n    desvNombre: 'Entrega Ingenierías'\n  },{\n    nombre: 'Aprobación de Componentes Críticos',\n    prevista: 'Fecha prevista aprobación de componentes críticos',\n    tentativa: 'Fecha tentativa aprobación de componentes críticos',\n    modificada: 'Fecha modificada aprobación de componentes críticos',\n    real: 'Fecha aprobación de componentes críticos',\n    desvNombre: 'Aprobación Componentes Críticos'\n  },\n  {\n    nombre: 'Ingeniería Aprobada por el Cliente',\n    prevista: 'Fecha prevista aprobación de ingeniería por el cliente',\n    tentativa: 'Fecha tentativa ingeniería aprobada por el cliente',\n    modificada: 'Fecha modificada ingeniería aprobada por el cliente',\n    real: 'Fecha ingeniería aprobada por el cliente',\n    desvNombre: 'Aprobación Ingeniería Cliente'\n  },\n  {\n    nombre: 'Comité de Márgenes',\n    prevista: 'Fecha prevista Comité de Márgenes Aprobado',\n    tentativa: 'Fecha tentativa Comité de Márgenes Aprobado',\n    modificada: 'Fecha modificada Comité de Márgenes Aprobado',\n    real: 'Fecha Comité de Márgenes Aprobado',\n    desvNombre: 'Comité de Márgenes'\n  },\n  {\n    nombre: 'Compra de Materiales',\n    prevista: 'Fecha prevista Compra de Materiales',\n    tentativa: 'Fecha tentativa Compra de Materiales',\n    modificada: 'Fecha modificada Compra de Materiales',\n    real: 'Fecha Compra de Materiales',\n    desvNombre: 'Compra de Materiales'\n  },\n  {\n    nombre: 'Inicio de Instalación',\n    prevista: 'Fecha prevista Inicio de Instalación',\n    tentativa: 'Fecha tentativa Inicio de Instalación',\n    modificada: 'Fecha modificada Inicio de Instalación',\n    real: 'Fecha Inicio de Instalación',\n    desvNombre: 'Inicio de Instalación'\n  },\n  {\n    nombre: 'Commissioning',\n    prevista: 'Fecha prevista Commissioning',\n    tentativa: 'Fecha tentativa Commissioning',\n    modificada: 'Fecha modificada Commissioning',\n    real: 'Fecha Commissioning',\n    desvNombre: 'Commissioning'\n  },\n  {\n    nombre: 'Visita Calidad a Sitio',\n    prevista: 'Fecha prevista Visita calidad a sitio',\n    tentativa: 'Fecha tentativa Visita calidad a sitio',\n    modificada: 'Fecha modificada Visita calidad a sitio',\n    real: 'Fecha Visita calidad a sitio',\n    desvNombre: 'Visita Calidad a Sitio'\n  },\n  {\n    nombre: 'Entrega al Cliente',\n    prevista: 'Fecha prevista Entrega al cliente',\n    tentativa: 'Fecha tentativa Entrega al cliente',\n    modificada: 'Fecha modificada Entrega al cliente',\n    real: 'Fecha Entrega al cliente',\n    desvNombre: 'Entrega al Cliente'\n  },\n  {\n    nombre: 'Pase a Servicios/liberación de sitio',\n    prevista: 'Fecha prevista Pase a Servicios/liberación de sitio',\n    tentativa: 'Fecha tentativa Pase a Servicios/liberación de sitio',\n    modificada: 'Fecha modificada Pase a Servicios/liberación de sitio',\n    real: 'Fecha Pase a Servicios/liberación de sitio',\n    desvNombre: 'Fecha Pase a Servicios/liberación de sitio'\n  },\n  {\n    nombre: 'Pase a Gestión',\n    prevista: 'Fecha prevista Pase a Gestión',\n    tentativa: 'Fecha tentativa Pase a Gestión',\n    modificada: 'Fecha modificada Pase a Pase a Gestión',\n    real: 'Fecha Pase a Gestión',\n    desvNombre: 'Pase a Gestión'\n  },\n  {\n    nombre: 'Cierre Presupuestal',\n    prevista: 'Fecha prevista Cierre Presupuestal',\n    tentativa: 'Fecha tentativa Cierre Presupuestal',\n    modificada: 'Fecha modificada Cierre Presupuestal',\n    real: 'Fecha Cierre Presupuestal',\n    desvNombre: 'Cierre Presupuestal'\n  },\n  {\n    nombre: 'Interconexión',\n    prevista: 'Fecha prevista Interconexión',\n    tentativa: 'Fecha tentativa Interconexión',\n    modificada: 'Fecha modificada Interconexión',\n    real: 'Fecha Interconexión',\n    desvNombre: 'Interconexión'\n  }\n];\n\n// Mapeo inverso: nombre en Desviaciones → nombre display\nconst DESV_TO_HITO = {};\nHITOS.forEach(h => { DESV_TO_HITO[h.desvNombre] = h.nombre; });\n\n// ─── PROCESAR PROYECTOS ──────────────────────────────────────────\n\nconst proyectos = dashboard.map(row => {\n  const hitos = HITOS.map(h => {\n    const estatus = calcEstatus(row[h.prevista], row[h.tentativa], row[h.modificada]);\n    const fp = formatDate(row[h.prevista]);\n    const ft = formatDate(row[h.tentativa]);\n    const fm = formatDate(row[h.modificada]);\n    const ref = ft || fp; // Referencia usada para el cálculo\n\n    // Calcular días de desviación contra la referencia\n    let diasDesviacion = null;\n    if (ref && fm) {\n      diasDesviacion = daysDiff(ref, fm);\n    } else if (ref && !fm && estatus === 'Atrasado') {\n      // Antes:\ndiasDesviacion = daysDiff(ref, today.toISOString());\n\n// Después:\nconst todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;\ndiasDesviacion = daysDiff(ref, todayStr);\n    }\n\n    return {\n      nombre: h.nombre,\n      estatus,\n      fechaPlan: fp,\n      fechaTentativa: ft,\n      fechaModificada: fm,\n      fechaReferencia: ref,\n      diasDesviacion\n    };\n  });\n\n  const hitosConEstatus = hitos.filter(h => h.estatus !== null);\n  const atrasados = hitos.filter(h => h.estatus === 'Atrasado').length;\n  const pendientes = hitos.filter(h => h.estatus === 'Pendiente').length;\n  const conRetraso = hitos.filter(h => h.estatus === 'Cumplido con retraso').length;\n  const aTiempo = hitos.filter(h => h.estatus === 'Cumplido a tiempo').length;\n\n  // Fecha fin plan = última fecha prevista no nula\n  let fechaFinPlan = null;\n  for (let i = HITOS.length - 1; i >= 0; i--) {\n    const fp = formatDate(row[HITOS[i].prevista]);\n    if (fp) { fechaFinPlan = fp; break; }\n  }\n\n  return {\n    proj:             clean(row['PROJ']),\n    sitio:            clean(row['Sitio']),\n    cuenta:           clean(row['Cuenta']),\n    pm:               clean(row['Project Manager']),\n    tipo:             clean(row['Tipo de proyecto']),\n    tecnologia:       clean(row['Tecnología']),\n    kam:              clean(row['KAM']),\n    supervisor:       clean(row['Supervisor']),\n    potenciaFV:       cleanNum(row['Potencia FV (kWp)']),\n    potenciaSTO:      cleanNum(row['Potencia STO (kW)']),\n    capacidadSTO:     cleanNum(row['Capacidad STO (kWh)']),\n    faseActual:       clean(row['Fase Actual']),\n    pctObra:          row['% de Obra'] || '',\n    pctProyecto:      row['% de Proyecto'] || '',\n    entidadFed:       cleanEntidad(row['Entidad Federativa']),\n    tipoProv:         clean(row['Tipo de proveeduría']),\n    estatusAdO:       clean(row['Estatus AdO']),\n\n    // ── CAMPOS NUEVOS ──\n    subcontratista:       clean(row['Servicio Instalación SFV']),\n    servInstalacionSAE:   clean(row['Servicio Instalación SAE']),\n    servObraCivil:        clean(row['Servicio Obra Civil']),\n    fechaInicioProyecto:  formatDate(row['Pase a operaciones (Estatuto)']),\n    fechaFinPlan:         fechaFinPlan,\n    tipoInstalacion:      clean(row['Tipo de instalación']),\n    categoria:            clean(row['Categoría']),\n    semanasEsperadas:     row['Semanas Esperadas'] || '',\n    semanasReales:        row['Semanas Reales'] || '',\n    lat:                  cleanNum(row['Latitud']),\n    lng:                  cleanNum(row['Longitud']),\n\n    hitos,\n    conteos: { atrasados, pendientes, conRetraso, aTiempo, total: hitosConEstatus.length }\n  };\n});\n\n// ─── PROCESAR DESVIACIONES (array completo) ──────────────────────\n\nconst desviacionesArr = desviacionesRaw\n  .filter(d => d['PROJ'] && d['Hito'])\n  .map(d => ({\n    proj:               clean(d['PROJ']),\n    sitio:              clean(d['Sitio']),\n    cuenta:             clean(d['Cuenta']),\n    pm:                 clean(d['Project Manager']),\n    tipo:               clean(d['Tipo de Proyecto']),\n    tipoInstalacion:    clean(d['Tipo Instalación']),\n    kam:                clean(d['KAM']),\n    supervisor:         clean(d['Supervisor']),\n    tipoProv:           clean(d['Tipo Proveeduría']),\n    servInstalacionSFV: clean(d['Serv. Inst. SFV']),\n    servInstalacionSAE: clean(d['Serv. Inst. SAE']),\n    servObraCivil:      clean(d['Serv. Obra Civil']),\n    cierreComercial:    formatDate(d['Cierre Comercial']),\n    paseOperaciones:    formatDate(d['Pase a Operaciones']),\n    semanasEsperadas:   parseFloat(d['Semanas Esperadas']) || null,\n    semanasReales:      parseFloat(d['Semanas Reales']) || null,\n    hito:               clean(d['Hito']),\n    hitoNombreDisplay:  DESV_TO_HITO[clean(d['Hito'])] || clean(d['Hito']),\n    fechaPrevista:      formatDate(d['Fecha Prevista']),\n    fechaReal:          formatDate(d['Fecha Real']),\n    diasDesviacion:     parseFloat(d['Días Desviación']) || 0,\n    semanasDesviacion:  parseFloat(d['Semanas Desviación']) || 0,\n    tipoDesviacion:     clean(d['Tipo Desviación']),\n    comentariosRetraso: clean(d['Comentarios de Retraso']),\n    areaResponsable:    clean(d['Área responsable']),\n    diasOnHold:         parseFloat(d['Días On Hold Aplicables']) || 0,\n    desviacionNeta:     parseFloat(d['Desviación Neta (sin OH)']) || null,\n\n  }));\n\n// ─── KPIs ────────────────────────────────────────────────────────\n\nconst kpis = {\n  totalProyectos:    proyectos.length,\n  totalCuentas:      [...new Set(proyectos.map(p => p.cuenta).filter(Boolean))].length,\n  totalAtrasados:    proyectos.reduce((s, p) => s + p.conteos.atrasados, 0),\n  totalPendientes:   proyectos.reduce((s, p) => s + p.conteos.pendientes, 0),\n  totalConRetraso:   proyectos.reduce((s, p) => s + p.conteos.conRetraso, 0),\n  totalATiempo:      proyectos.reduce((s, p) => s + p.conteos.aTiempo, 0),\n  potenciaFVTotal:   proyectos.reduce((s, p) => s + (parseFloat(p.potenciaFV) || 0), 0).toFixed(1),\n  potenciaSTOTotal:  proyectos.reduce((s, p) => s + (parseFloat(p.potenciaSTO) || 0), 0).toFixed(1),\n  capacidadSTOTotal: proyectos.reduce((s, p) => s + (parseFloat(p.capacidadSTO) || 0), 0).toFixed(1),\n  sinFechas:         proyectos.filter(p => p.conteos.total === 0).length,\n};\n\n// ─── POR HITO ────────────────────────────────────────────────────\n\nconst porHito = HITOS.map(h => {\n  const rows = proyectos.map(p => p.hitos.find(x => x.nombre === h.nombre)?.estatus).filter(Boolean);\n  return {\n    hito: h.nombre,\n    atrasado:   rows.filter(s => s === 'Atrasado').length,\n    pendiente:  rows.filter(s => s === 'Pendiente').length,\n    conRetraso: rows.filter(s => s === 'Cumplido con retraso').length,\n    aTiempo:    rows.filter(s => s === 'Cumplido a tiempo').length,\n    total:      rows.length\n  };\n});\n\n// ─── PROYECTO CRÍTICO ────────────────────────────────────────────\n\nconst proyectoCritico = [...proyectos]\n  .sort((a, b) => b.conteos.atrasados - a.conteos.atrasados)[0] || null;\n\n// ─── PROMEDIO DESVIACIÓN POR HITO ────────────────────────────────\n\nconst desviacionPorHito = {};\ndesviacionesArr.forEach(d => {\n  const hito = d.hito;\n  const dias = d.diasDesviacion;\n  if (!hito || isNaN(dias)) return;\n  if (!desviacionPorHito[hito]) desviacionPorHito[hito] = { suma: 0, count: 0 };\n  desviacionPorHito[hito].suma += dias;\n  desviacionPorHito[hito].count += 1;\n});\n\nconst promedioDesviacion = Object.entries(desviacionPorHito)\n  .map(([hito, d]) => ({\n    hito,\n    hitoNombreDisplay: DESV_TO_HITO[hito] || hito,\n    promedioDias: +(d.suma / d.count).toFixed(1),\n    totalMuestras: d.count\n  }))\n  .sort((a, b) => b.promedioDias - a.promedioDias);\n\n  // ─── PROMEDIO DESVIACIÓN NETA POR HITO ───────────────────────\n\nconst desviacionNetaPorHito = {};\ndesviacionesArr.forEach(d => {\n  const hito = d.hito;\n  const dias = d.desviacionNeta;\n  if (!hito || dias === null || isNaN(dias)) return;\n  if (!desviacionNetaPorHito[hito]) desviacionNetaPorHito[hito] = { suma: 0, count: 0 };\n  desviacionNetaPorHito[hito].suma += dias;\n  desviacionNetaPorHito[hito].count += 1;\n});\n\nconst promedioDesviacionNeta = Object.entries(desviacionNetaPorHito)\n  .map(([hito, d]) => ({\n    hito,\n    hitoNombreDisplay: DESV_TO_HITO[hito] || hito,\n    promedioDias: +(d.suma / d.count).toFixed(1),\n    totalMuestras: d.count\n  }))\n  .sort((a, b) => b.promedioDias - a.promedioDias);\n\n// ─── RENDIMIENTO POR SUBCONTRATISTA ─────────────────────────────\n\nconst subContData = {};\nproyectos.forEach(p => {\n  const sub = p.subcontratista;\n  if (!sub) return;\n  if (!subContData[sub]) subContData[sub] = { proyectos: 0, aTiempo: 0, conRetraso: 0, atrasados: 0, total: 0 };\n  subContData[sub].proyectos++;\n  subContData[sub].aTiempo += p.conteos.aTiempo;\n  subContData[sub].conRetraso += p.conteos.conRetraso;\n  subContData[sub].atrasados += p.conteos.atrasados;\n  subContData[sub].total += p.conteos.total;\n});\n\nconst rendimientoSubcontratista = Object.entries(subContData)\n  .filter(([, s]) => s.total > 0)\n  .map(([nombre, s]) => ({\n    nombre,\n    proyectos: s.proyectos,\n    aTiempo: s.aTiempo,\n    conRetraso: s.conRetraso,\n    atrasados: s.atrasados,\n    totalHitos: s.total,\n    pctATiempo: +((s.aTiempo / s.total) * 100).toFixed(1)\n  }))\n  .sort((a, b) => b.totalHitos - a.totalHitos);\n\n// ─── FILTROS ─────────────────────────────────────────────────────\n\nconst filtros = {\n  projs:         [...new Set(proyectos.map(p => p.proj).filter(Boolean))].sort(),\n  sitios:        [...new Set(proyectos.map(p => p.sitio).filter(Boolean))].sort(),\n  pms:           [...new Set(proyectos.map(p => p.pm).filter(Boolean))].sort(),\n  cuentas:       [...new Set(proyectos.map(p => p.cuenta).filter(Boolean))].sort(),\n  tipos:         [...new Set(proyectos.map(p => p.tipo).filter(Boolean))].sort(),\n  fases:         [...new Set(proyectos.map(p => p.faseActual).filter(Boolean))].sort(),\n  supervisores:  [...new Set(proyectos.map(p => p.supervisor).filter(Boolean))].sort(),\n  entidades:     [...new Set(proyectos.map(p => p.entidadFed).filter(Boolean))].sort(),\n  tecnologias:   [...new Set(proyectos.map(p => p.tecnologia).filter(Boolean))].sort(),\n  proveedurias:  [...new Set(proyectos.map(p => p.tipoProv).filter(Boolean))].sort(),\n  kams:          [...new Set(proyectos.map(p => p.kam).filter(Boolean))].sort(),\n  estatusAdO:    [...new Set(proyectos.map(p => p.estatusAdO).filter(Boolean))].sort(),\n\n};\n\n// ─── LEER DATOS DE PRONÓSTICOS ───────────────────────────────────\n \nconst pronosticosItems = $('Leer Pronósticos').all();\nconst pronosticosRaw = pronosticosItems.map(i => i.json);\n \n// ─── PARSEO DE FECHAS DD/MM/YYYY ────────────────────────────────\n \nfunction parseDateDMY(val) {\n  if (!val || val === '' || val === 'null' || val === 'None') return null;\n  const s = String(val).trim();\n  // Google Sheets español: DD/MM/YYYY o D/M/YYYY\n  const match = s.match(/^(\\d{1,2})\\/(\\d{1,2})\\/(\\d{4})$/);\n  if (match) {\n    const [, day, month, year] = match;\n    const d = new Date(+year, +month - 1, +day);\n    return isNaN(d.getTime()) ? null : d;\n  }\n  // Fallback ISO\n  const d = new Date(val);\n  return isNaN(d.getTime()) ? null : d;\n}\n \nfunction fmtDate(val) {\n  const d = parseDateDMY(val);\n  if (!d) return null;\n  const yyyy = d.getFullYear();\n  const mm = String(d.getMonth() + 1).padStart(2, '0');\n  const dd = String(d.getDate()).padStart(2, '0');\n  return `${yyyy}-${mm}-${dd}`;\n}\n \n// ─── DEFINICIÓN DE FASES PARA EL GANTT ──────────────────────────\n \nconst FASES_GANTT = [\n  {\n    id: 'comercial',\n    nombre: 'Comercial',\n    color: '#828080',\n    inicioKey: null,  // No hay fecha de Cierre Comercial en Pronósticos\n    finKey: 'Fecha Pase a Operaciones',\n    hitos: ['Pase a Operaciones']\n  },\n  {\n    id: 'ingenieria',\n    nombre: 'Ingeniería',\n    color: '#3D7D80',\n    inicioKey: 'Fecha Apb Comp Críticos',\n    finKey: 'Fecha Apb Cliente',\n    hitos: ['Apb Comp Críticos', 'Entrega Ingenierías', 'Apb Cliente']\n  },\n  {\n    id: 'proveeduria',\n    nombre: 'Proveeduría',\n    color: '#4c9fff',\n    inicioKey: 'Fecha Comité Márgenes',\n    finKey: 'Fecha Compra Materiales',\n    hitos: ['Comité Márgenes', 'Compra Materiales']\n  },\n  {\n    id: 'instalacion',\n    nombre: 'Instalación',\n    color: '#00AA85',\n    inicioKey: 'Fecha Inicio Instalación',\n    finKey: 'Fecha Commissioning',\n    hitos: ['Inicio Instalación', 'Commissioning']\n  },\n  {\n    id: 'liberacion',\n    nombre: 'Liberación',\n    color: '#9f7aff',\n    inicioKey: 'Fecha Visita Calidad',\n    finKey: 'Fecha Entrega Cliente',\n    hitos: ['Visita Calidad', 'Entrega Cliente']\n  },\n  {\n    id: 'cierre',\n    nombre: 'Cierre',\n    color: '#ff9f43',\n    inicioKey: 'Fecha Pase Servicios',\n    finKey: 'Fecha Cierre Presupuestal',\n    hitos: ['Pase Servicios', 'Pase Gestión', 'Cierre Presupuestal']\n  }\n];\n \n// ─── MAPEO DE HITOS PARA PLAN (PREVISTA) vs ACTUAL ──────────────\n// Para la línea gris (plan), necesitamos las fechas previstas de Dashboard\n// Para la línea de color (actual), usamos las fechas de Pronósticos (cascada)\n \nconst HITOS_PREVISTA_MAP = {\n  'Pase a Operaciones': 'Pase a operaciones (Estatuto)',\n  'Apb Comp Críticos': 'Fecha tentativa aprobación de componentes críticos',\n  'Entrega Ingenierías': 'Fecha tentativa entrega ingenierías',\n  'Apb Cliente': 'Fecha prevista tentativa de ingeniería por el cliente',\n  'Comité Márgenes': 'Fecha tentativa Comité de Márgenes Aprobado',\n  'Compra Materiales': 'Fecha tentativa Compra de Materiales',\n  'Inicio Instalación': 'Fecha tentativa Inicio de Instalación',\n  'Commissioning': 'Fecha tentativa Commissioning',\n  'Visita Calidad': 'Fecha tentativa Visita calidad a sitio',\n  'Entrega Cliente': 'Fecha tentativa Entrega al cliente',\n  'Pase Servicios': 'Fecha tentativa Pase a Servicios/liberación de sitio',\n  'Pase Gestión': 'Fecha tentativa Pase a Gestión',\n  'Cierre Presupuestal': 'Fecha tentativa Cierre Presupuestal',\n};\n \n// ─── PROCESAR CADA PROYECTO ─────────────────────────────────────\n \nconst pronosticos = pronosticosRaw\n  .filter(row => row['PROJ'] && row['PROJ'] !== '')\n  .map(row => {\n    const proj = row['PROJ'];\n \n    // Buscar datos de Dashboard para las fechas previstas (plan original)\n    const dashRow = dashboard.find(d => d['PROJ'] === proj);\n \n    // ── Construir fases para el Gantt ──\n    const fases = FASES_GANTT.map(fase => {\n      // Fechas ACTUALES (de Pronósticos — cascada Real>Mod>Tent>Prev);\n    const fechaInicio = fase.inicioKey ? fmtDate(row[fase.inicioKey]) : fmtDate(row[fase.finKey]);\n      const fechaFin = fmtDate(row[fase.finKey]);\n \n      // Fechas PLAN (previstas originales de Dashboard)\n      let planInicio = null;\n      let planFin = null;\n      if (dashRow) {\n        const inicioHito = fase.hitos[0];\n        const finHito = fase.hitos[fase.hitos.length - 1];\n        const prevInicioCol = HITOS_PREVISTA_MAP[inicioHito];\n        const prevFinCol = HITOS_PREVISTA_MAP[finHito];\n        if (prevInicioCol) planInicio = fmtDate(dashRow[prevInicioCol]);\n        if (prevFinCol) planFin = fmtDate(dashRow[prevFinCol]);\n      }\n \n      // Determinar estatus de la fase (basado en el último hito de la fase)\n      const finHitoName = fase.hitos[fase.hitos.length - 1];\n      const estatusFin = row[`Estatus ${finHitoName}`] || '';\n      // Si el primer hito no tiene fecha, toda la fase está sin fecha\n      const inicioHitoName = fase.hitos[0];\n      const estatusInicio = row[`Estatus ${inicioHitoName}`] || '';\n \n      let estatus = 'pendiente';\n      if (estatusInicio === 'Sin fecha' || !fechaInicio) {\n        estatus = 'sinfecha';\n      } else if (estatusFin === 'Cumplido') {\n        estatus = 'cumplido';\n      } else if (estatusFin === 'Cumplido futuro') {\n        estatus = 'pronostico';\n      } else if (estatusFin === 'Pronóstico') {\n        estatus = 'pronostico';\n      } else if (estatusInicio === 'Cumplido' && (estatusFin === 'Pendiente' || estatusFin === 'En progreso')) {\n        estatus = 'progreso';\n      }\n \n      // Para Instalación: calcular % de avance\n      let progresoPct = null;\n      if (fase.id === 'instalacion') {\n        const semanasEsp = parseFloat(row['Semanas esperadas']) || 0;\n        const semanaAct = parseFloat(row['Semana actual']) || 0;\n        if (semanasEsp > 0) {\n          progresoPct = Math.min(+(semanaAct / semanasEsp).toFixed(2), 1);\n        }\n      }\n \n      return {\n        id: fase.id,\n        nombre: fase.nombre,\n        color: fase.color,\n        fechaInicio,\n        fechaFin,\n        planInicio,\n        planFin,\n        estatus,\n        progresoPct,\n      };\n    });\n \n    // ── Interconexión como marcador independiente ──\n    const interconexion = {\n      check: row['Check Interconexión'] === true || row['Check Interconexión'] === 'TRUE',\n      fechaPrevista: dashRow ? fmtDate(dashRow['Fecha prevista Interconexión']) : null,\n      fechaActual: dashRow ? fmtDate(\n        dashRow['Fecha Interconexión'] ||\n        dashRow['Fecha modificada Interconexión'] ||\n        dashRow['Fecha tentativa Interconexión'] ||\n        dashRow['Fecha prevista Interconexión']\n      ) : null,\n    };\n \n    // ── Hitos individuales (para tooltip) ──\n    const HITO_KEYS = [\n      'Pase a Operaciones', 'Apb Comp Críticos', 'Entrega Ingenierías',\n      'Apb Cliente', 'Comité Márgenes', 'Compra Materiales',\n      'Inicio Instalación', 'Commissioning', 'Visita Calidad',\n      'Entrega Cliente', 'Pase Servicios', 'Pase Gestión', 'Cierre Presupuestal'\n    ];\n \n    const hitos = HITO_KEYS.map(nombre => ({\n      nombre,\n      fecha: fmtDate(row[`Fecha ${nombre}`]),\n      pct: parseFloat(row[`% ${nombre}`]) || 0,\n      estatus: row[`Estatus ${nombre}`] || row[`Estatus ${nombre.normalize('NFD').replace(/[\\u0300-\\u036f]/g, '')}`] || 'Sin fecha',\n    }));\n \n    return {\n      proj,\n      sitio: row['Sitio'] || '',\n      tecnologia: row['Tecnología'] || '',\n      cuenta: row['Cuenta'] || '',\n      pm: row['PM'] || '',\n      faseActual: row['Fase Actual'] || '',\n      estatusAdO: row['Estatus AdO'] || '',\n      pctPronostico: parseFloat(row['% Pronóstico Total']) || 0,\n      fechaInicio: fmtDate(row['Fecha inicio proyecto']),\n      fechaFin: fmtDate(row['Fecha fin proyecto']),\n      previstaCommissioning: fmtDate(row['Prevista Commissioning']),\n      diasDesviacion: parseInt(row['Días desviación Commissioning']) || null,\n      semanasEsperadas: parseFloat(row['Semanas esperadas']) || null,\n      semanaActual: parseFloat(row['Semana actual']) || null,\n      checkInterconexion: interconexion,\n      kickOffInterno: dashRow ? fmtDate(dashRow['Kick Off interno PM/Inter áreas']) : null,\n      fases,\n      hitos,\n    };\n  });\n\n// ─── LEER INSIGHTS IA ────────────────────────────────────────────\n\nlet insightsIA = [];\ntry {\n  const insightsItems = $('Leer IA_Insights').all();\n  const insightsRaw = insightsItems.map(i => i.json);\n  \n  if (insightsRaw.length > 0) {\n    // Encontrar el timestamp más reciente\n    const timestamps = [...new Set(insightsRaw.map(r => r.timestamp).filter(Boolean))];\n    timestamps.sort((a, b) => {\n      \n      const parseTS = (ts) => {\n        // Expresión regular actualizada para incluir la captura de a.m./p.m.\n        const parts = ts.match(/(\\d{1,2})\\/(\\d{1,2})\\/(\\d{4}),?\\s*(\\d{1,2}):(\\d{2}):(\\d{2})\\s*([ap]\\.?m\\.?)/i);\n        \n        if (parts) {\n          let hour = parseInt(parts[4], 10);\n          const ampm = parts[7].toLowerCase();\n          \n          // Lógica para convertir formato 12h a 24h\n          if (ampm.startsWith('p') && hour < 12) {\n            hour += 12; // 3 PM se convierte en 15\n          } else if (ampm.startsWith('a') && hour === 12) {\n            hour = 0;   // 12 AM se convierte en 0 (medianoche)\n          }\n\n          return new Date(\n            parseInt(parts[3], 10),     // Año\n            parseInt(parts[2], 10) - 1, // Mes (indexado en 0)\n            parseInt(parts[1], 10),     // Día\n            hour,                       // Hora corregida\n            parseInt(parts[5], 10),     // Minutos\n            parseInt(parts[6], 10)      // Segundos\n          ).getTime();\n        }\n        \n        // Fallback por si llega un formato diferente\n        return new Date(ts).getTime();\n      };\n      \n      return parseTS(b) - parseTS(a);\n    });\n    \n    const ultimoTimestamp = timestamps[0];\n    \n    insightsIA = insightsRaw\n      .filter(r => r.timestamp === ultimoTimestamp)\n      .map(r => ({\n        timestamp: r.timestamp,\n        tipo: r.tipo,\n        titulo: r.titulo,\n        diagnostico: r.diagnostico,\n        evidencia: r.evidencia,\n        recomendacion: r.recomendacion,\n      }));\n  }\n} catch (e) {\n  // Si la hoja no existe o está vacía, no romper el dashboard\n  insightsIA = [];\n}\n\n// ─── RESPUESTA FINAL ─────────────────────────────────────────────\n\nreturn [{\n  json: {\n    ok: true,\n    generadoEn: new Date().toISOString(),\n    kpis,\n    filtros,\n    proyectos,\n    desviaciones: desviacionesArr,\n    porHito,\n    proyectoCritico,\n    promedioDesviacion,\n    promedioDesviacionNeta,\n    rendimientoSubcontratista,\n    pronosticos,\n    fechaCortePronostico,\n    insightsIA\n  }\n}];"
+      },
+      "id": "b0cd33b9-6ec5-4d13-bf25-af77d1bc3253",
+      "name": "Calcular Estatus",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        496,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "id": "5628818b-85c5-4ed2-a31d-e500bab7d85b",
+      "name": "Responder JSON",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        720,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "numberInputs": 5
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        272,
+        240
+      ],
+      "id": "fe3893d9-9ac9-4084-96f7-843a32751d38",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1_RJ65-rmI3mJwHx4Eg8U6-QY7xlGuHNn45EfpCqRJQQ",
+          "mode": "list",
+          "cachedResultName": "Enlight One Database_Esquema 2026",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1_RJ65-rmI3mJwHx4Eg8U6-QY7xlGuHNn45EfpCqRJQQ/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1857694411,
+          "mode": "list",
+          "cachedResultName": "Pronósticos",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1_RJ65-rmI3mJwHx4Eg8U6-QY7xlGuHNn45EfpCqRJQQ/edit#gid=1857694411"
+        },
+        "options": {
+          "dataLocationOnSheet": {
+            "values": {
+              "rangeDefinition": "specifyRangeA1",
+              "range": "A2:BB"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        48,
+        96
+      ],
+      "id": "28585347-d29b-4a8e-bf62-336c02d7c329",
+      "name": "Leer Pronósticos",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "af48hEP1PbQpWRo9",
+          "name": "Google Sheets account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1_RJ65-rmI3mJwHx4Eg8U6-QY7xlGuHNn45EfpCqRJQQ",
+          "mode": "list",
+          "cachedResultName": "Enlight One Database_Esquema 2026",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1_RJ65-rmI3mJwHx4Eg8U6-QY7xlGuHNn45EfpCqRJQQ/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1857694411,
+          "mode": "list",
+          "cachedResultName": "Pronósticos",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1_RJ65-rmI3mJwHx4Eg8U6-QY7xlGuHNn45EfpCqRJQQ/edit#gid=1857694411"
+        },
+        "filtersUI": {
+          "values": []
+        },
+        "options": {
+          "dataLocationOnSheet": {
+            "values": {
+              "rangeDefinition": "specifyRange",
+              "firstDataRow": 1
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        48,
+        -96
+      ],
+      "id": "69f56979-52ff-4d88-803d-a3eed0271427",
+      "name": "Fecha pronóstico",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "af48hEP1PbQpWRo9",
+          "name": "Google Sheets account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1_RJ65-rmI3mJwHx4Eg8U6-QY7xlGuHNn45EfpCqRJQQ",
+          "mode": "list",
+          "cachedResultName": "Enlight One Database_Esquema 2026",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1_RJ65-rmI3mJwHx4Eg8U6-QY7xlGuHNn45EfpCqRJQQ/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 63866189,
+          "mode": "list",
+          "cachedResultName": "IA_Insights",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1_RJ65-rmI3mJwHx4Eg8U6-QY7xlGuHNn45EfpCqRJQQ/edit#gid=63866189"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        48,
+        480
+      ],
+      "id": "7c87400b-bbb6-433a-b712-a07a0124b992",
+      "name": "Leer IA_Insights",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "af48hEP1PbQpWRo9",
+          "name": "Google Sheets account 3"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Leer Dashboard",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Leer Desviaciones",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Leer Pronósticos",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fecha pronóstico",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Leer IA_Insights",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer Dashboard": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Leer Desviaciones": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calcular Estatus": {
+      "main": [
+        [
+          {
+            "node": "Responder JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Calcular Estatus",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer Pronósticos": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Fecha pronóstico": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "Leer IA_Insights": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 4
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "d07ceca5e978fedf0de8319073f060d445fc5f9ac86873adfc6d77f9052a35c4"
+  }
+}
