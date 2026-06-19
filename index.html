@@ -91,6 +91,11 @@ header { padding:16px 28px 0; background:linear-gradient(180deg,rgba(0,170,133,0
 .ms-panel label { display:flex; align-items:center; gap:6px; padding:4px 10px; font-size:10px; color:var(--text2); cursor:pointer; transition:background .15s; white-space:nowrap; }
 .ms-panel label:hover { background:rgba(0,170,133,0.08); color:var(--text); }
 .ms-panel input[type="checkbox"] { accent-color:var(--accent); width:12px; height:12px; cursor:pointer; }
+.ms-panel-search-wrap { position:sticky; top:0; background:var(--surface2); padding:6px 8px 4px; border-bottom:1px solid var(--border); z-index:1; }
+.ms-panel-search { font-family:var(--font-body); font-size:10px; color:var(--text); background:var(--surface); border:1px solid var(--border); border-radius:2px; padding:4px 8px; width:100%; box-sizing:border-box; outline:none; transition:border-color .2s; }
+.ms-panel-search:focus { border-color:var(--accent); }
+.ms-panel-search::placeholder { color:var(--text3); }
+.ms-panel-no-match { padding:6px 10px; font-size:10px; color:var(--text3); font-style:italic; }
 
 /* ── DATA QUALITY TOOLTIP ──────── */
 .dq-tooltip-trigger { cursor:help; position:relative; }
@@ -930,7 +935,7 @@ async function fetchData() {
 // ─── FILTERS — Multi-select bidireccional ─────────────────────
 function buildFilters() {
   const defs = [
-    {key:'proj',label:'PROJ',src:'projs'},
+    {key:'proj',label:'PROJ',src:'projs',filterable:true},
     {key:'kam',label:'KAM',src:'kams'},
     {key:'sitio',label:'Sitio',src:'sitios',searchable:true},
     {key:'pm',label:'Project Manager',src:'pms'},
@@ -989,8 +994,31 @@ function buildFilters() {
         else { toggle.textContent = f.label + ' (' + selected.size + ')'; toggle.classList.add('has-selection'); }
 
         const panel = document.createElement('div'); panel.className = 'ms-panel';
+
+        if (f.filterable) {
+          const sw = document.createElement('div'); sw.className = 'ms-panel-search-wrap';
+          const si = document.createElement('input'); si.type = 'text'; si.className = 'ms-panel-search';
+          si.placeholder = 'Buscar…';
+          si.addEventListener('click', e => e.stopPropagation());
+          si.addEventListener('input', () => {
+            const q = si.value.toLowerCase();
+            let anyVisible = false;
+            panel.querySelectorAll('label[data-val]').forEach(lbl => {
+              const match = lbl.dataset.val.toLowerCase().includes(q);
+              lbl.style.display = match ? '' : 'none';
+              if (match) anyVisible = true;
+            });
+            let nm = panel.querySelector('.ms-panel-no-match');
+            if (!anyVisible) {
+              if (!nm) { nm = document.createElement('div'); nm.className = 'ms-panel-no-match'; nm.textContent = 'Sin resultados'; panel.appendChild(nm); }
+              nm.style.display = '';
+            } else if (nm) { nm.style.display = 'none'; }
+          });
+          sw.appendChild(si); panel.appendChild(sw);
+        }
+
         available.forEach(v => {
-          const lbl = document.createElement('label');
+          const lbl = document.createElement('label'); lbl.dataset.val = v;
           const cb = document.createElement('input'); cb.type = 'checkbox'; cb.value = v;
           cb.checked = selected.has(v);
           cb.addEventListener('change', () => {
@@ -1005,11 +1033,19 @@ function buildFilters() {
 
         toggle.addEventListener('click', (e) => {
           e.stopPropagation();
-          // Close other panels
           document.querySelectorAll('.ms-panel.open').forEach(p => { if (p !== panel) p.classList.remove('open'); });
           document.querySelectorAll('.ms-toggle.open').forEach(t => { if (t !== toggle) t.classList.remove('open'); });
           panel.classList.toggle('open');
           toggle.classList.toggle('open');
+          if (panel.classList.contains('open')) {
+            const si = panel.querySelector('.ms-panel-search');
+            if (si) {
+              si.value = '';
+              panel.querySelectorAll('label[data-val]').forEach(l => l.style.display = '');
+              const nm = panel.querySelector('.ms-panel-no-match'); if (nm) nm.style.display = 'none';
+              requestAnimationFrame(() => si.focus());
+            }
+          }
         });
 
         dd.appendChild(toggle); dd.appendChild(panel); bar.appendChild(dd);
