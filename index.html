@@ -618,7 +618,7 @@ html[data-theme="light"] .logo-light-mode { display:block !important; }
       <div class="charts-row">
         <div class="chart-card span2">
           <div class="chart-title">Duración por fase: Plan vs Real/Estimada (semanas)</div>
-          <div class="chart-desc">Promedio del portafolio filtrado · Comercial excluido (sin fecha de inicio en datos)</div>
+          <div class="chart-desc">Promedio del portafolio filtrado</div>
           <div class="chart-wrapper" style="height:220px"><canvas id="chartDuracionFases"></canvas></div>
         </div>
       </div>
@@ -826,31 +826,37 @@ const PHASE_DEFS = [
     getStartPlan: p=>p.fechaInicioProyecto,
     getEndPlan:   p=>getHito(p,'Ingeniería Aprobada por el Cliente')?.fechaPlan,
     getStartReal: p=>p.fechaInicioProyecto,
-    getEndReal:   p=>{const h=getHito(p,'Ingeniería Aprobada por el Cliente');return h?.fechaModificada||h?.fechaReal||h?.fechaTentativa||h?.fechaPlan;}
+    getEndReal:   p=>{const h=getHito(p,'Ingeniería Aprobada por el Cliente');return h?.fechaReal||h?.fechaModificada||h?.fechaTentativa||h?.fechaPlan;}
   },
   { nombre:'Proveeduría', color:'#4c9fff',
     getStartPlan: p=>getHito(p,'Ingeniería Aprobada por el Cliente')?.fechaPlan,
     getEndPlan:   p=>getHito(p,'Compra de Materiales')?.fechaPlan,
-    getStartReal: p=>{const h=getHito(p,'Ingeniería Aprobada por el Cliente');return h?.fechaModificada||h?.fechaReal||h?.fechaTentativa||h?.fechaPlan;},
-    getEndReal:   p=>{const h=getHito(p,'Compra de Materiales');return h?.fechaModificada||h?.fechaReal||h?.fechaTentativa||h?.fechaPlan;}
+    getStartReal: p=>{const h=getHito(p,'Ingeniería Aprobada por el Cliente');return h?.fechaReal||h?.fechaModificada||h?.fechaTentativa||h?.fechaPlan;},
+    getEndReal:   p=>{const h=getHito(p,'Compra de Materiales');return h?.fechaReal||h?.fechaModificada||h?.fechaTentativa||h?.fechaPlan;}
+  },
+  { nombre:'Logística', color:'#e17055',
+    getStartPlan: p=>getHito(p,'Compra de Materiales')?.fechaPlan,
+    getEndPlan:   p=>getHito(p,'Inicio de Instalación')?.fechaPlan,
+    getStartReal: p=>{const h=getHito(p,'Compra de Materiales');return h?.fechaReal||h?.fechaModificada||h?.fechaTentativa||h?.fechaPlan;},
+    getEndReal:   p=>{const h=getHito(p,'Inicio de Instalación');return h?.fechaReal||h?.fechaModificada||h?.fechaTentativa||h?.fechaPlan;}
   },
   { nombre:'Instalación', color:'#00AA85',
     getStartPlan: p=>getHito(p,'Inicio de Instalación')?.fechaPlan,
     getEndPlan:   p=>getHito(p,'Commissioning')?.fechaPlan,
-    getStartReal: p=>{const h=getHito(p,'Inicio de Instalación');return h?.fechaModificada||h?.fechaReal||h?.fechaTentativa||h?.fechaPlan;},
-    getEndReal:   p=>{const h=getHito(p,'Commissioning');return h?.fechaModificada||h?.fechaReal||h?.fechaTentativa||h?.fechaPlan;}
+    getStartReal: p=>{const h=getHito(p,'Inicio de Instalación');return h?.fechaReal||h?.fechaModificada||h?.fechaTentativa||h?.fechaPlan;},
+    getEndReal:   p=>{const h=getHito(p,'Commissioning');return h?.fechaReal||h?.fechaModificada||h?.fechaTentativa||h?.fechaPlan;}
   },
   { nombre:'Liberación', color:'#9f7aff',
     getStartPlan: p=>getHito(p,'Commissioning')?.fechaPlan,
     getEndPlan:   p=>getHito(p,'Entrega al Cliente')?.fechaPlan,
-    getStartReal: p=>{const h=getHito(p,'Commissioning');return h?.fechaModificada||h?.fechaReal||h?.fechaTentativa||h?.fechaPlan;},
-    getEndReal:   p=>{const h=getHito(p,'Entrega al Cliente');return h?.fechaModificada||h?.fechaReal||h?.fechaTentativa||h?.fechaPlan;}
+    getStartReal: p=>{const h=getHito(p,'Commissioning');return h?.fechaReal||h?.fechaModificada||h?.fechaTentativa||h?.fechaPlan;},
+    getEndReal:   p=>{const h=getHito(p,'Entrega al Cliente');return h?.fechaReal||h?.fechaModificada||h?.fechaTentativa||h?.fechaPlan;}
   },
   { nombre:'Cierre', color:'#ff9f43',
     getStartPlan: p=>getHito(p,'Entrega al Cliente')?.fechaPlan,
     getEndPlan:   p=>getHito(p,'Pase a Servicios/liberación de sitio')?.fechaPlan,
-    getStartReal: p=>{const h=getHito(p,'Entrega al Cliente');return h?.fechaModificada||h?.fechaReal||h?.fechaTentativa||h?.fechaPlan;},
-    getEndReal:   p=>{const h=getHito(p,'Pase a Servicios/liberación de sitio');return h?.fechaModificada||h?.fechaReal||h?.fechaTentativa||h?.fechaPlan;}
+    getStartReal: p=>{const h=getHito(p,'Entrega al Cliente');return h?.fechaReal||h?.fechaModificada||h?.fechaTentativa||h?.fechaPlan;},
+    getEndReal:   p=>{const h=getHito(p,'Pase a Servicios/liberación de sitio');return h?.fechaReal||h?.fechaModificada||h?.fechaTentativa||h?.fechaPlan;}
   }
 ];
 
@@ -1627,47 +1633,89 @@ function renderChartDesviacion(){
 }
 
 function renderChartDuracionFases(){
-  const phaseData=PHASE_DEFS.map(ph=>{
-    let sumPlan=0,sumReal=0,nPlan=0,nReal=0;
-    filteredProyectos.forEach(p=>{
-      const pd=dateDiffWeeks(ph.getStartPlan(p),ph.getEndPlan(p));
-      const rd=dateDiffWeeks(ph.getStartReal(p),ph.getEndReal(p));
+  const p = filteredProyectos;
+
+  // Determine context: single project vs grouped
+  let isSingle = false, ctxLabel = '';
+  if (p.length === 1) {
+    isSingle = true;
+    const proj = p[0];
+    const nombre = proj.sitio || proj.cuenta || '';
+    ctxLabel = proj.proj + (nombre ? ' · ' + trunc(nombre, 38) : '');
+  } else {
+    const activeAcct = multiSelectState.cuenta?.size === 1 ? [...multiSelectState.cuenta][0]
+      : (chartFilter?.key === 'cuenta' ? chartFilter.value : null);
+    const activePM = multiSelectState.pm?.size === 1 ? [...multiSelectState.pm][0]
+      : (chartFilter?.key === 'pm' ? chartFilter.value : null);
+    const activePhase = multiSelectState.faseActual?.size === 1 ? [...multiSelectState.faseActual][0]
+      : (chartFilter?.key === 'faseActual' ? chartFilter.value : null);
+    if (activeAcct) ctxLabel = 'Cuenta: ' + activeAcct + ' (' + p.length + ' proy.)';
+    else if (activePM) ctxLabel = 'PM: ' + activePM + ' (' + p.length + ' proy.)';
+    else if (activePhase) ctxLabel = 'Fase: ' + activePhase + ' (' + p.length + ' proy.)';
+    else ctxLabel = 'Portafolio filtrado (' + p.length + ' proy.)';
+  }
+
+  // Update subtitle in DOM
+  const descEl = document.querySelector('#chartDuracionFases')?.closest('.chart-card')?.querySelector('.chart-desc');
+  if (descEl) descEl.textContent = isSingle ? ctxLabel : 'Promedio · ' + ctxLabel;
+
+  const phaseData = PHASE_DEFS.map(ph => {
+    if (isSingle) {
+      const proj = p[0];
+      const pd = dateDiffWeeks(ph.getStartPlan(proj), ph.getEndPlan(proj));
+      const rd = dateDiffWeeks(ph.getStartReal(proj), ph.getEndReal(proj));
+      return {
+        nombre: ph.nombre, color: ph.color,
+        avgPlan: pd !== null && pd > 0 && pd < 200 ? +pd.toFixed(1) : null,
+        avgReal: rd !== null && rd > 0 && rd < 200 ? +rd.toFixed(1) : null,
+        nPlan: 1, nReal: 1
+      };
+    }
+    let sumPlan=0, sumReal=0, nPlan=0, nReal=0;
+    p.forEach(proj => {
+      const pd = dateDiffWeeks(ph.getStartPlan(proj), ph.getEndPlan(proj));
+      const rd = dateDiffWeeks(ph.getStartReal(proj), ph.getEndReal(proj));
       if(pd!==null&&pd>0&&pd<200){sumPlan+=pd;nPlan++;}
       if(rd!==null&&rd>0&&rd<200){sumReal+=rd;nReal++;}
     });
-    return{nombre:ph.nombre,color:ph.color,avgPlan:nPlan>0?+(sumPlan/nPlan).toFixed(1):null,avgReal:nReal>0?+(sumReal/nReal).toFixed(1):null,nPlan,nReal};
+    return {nombre:ph.nombre,color:ph.color,avgPlan:nPlan>0?+(sumPlan/nPlan).toFixed(1):null,avgReal:nReal>0?+(sumReal/nReal).toFixed(1):null,nPlan,nReal};
   });
+
   destroyChart('chartDuracionFases');
-  charts.chartDuracionFases=new Chart(document.getElementById('chartDuracionFases'),{
+  charts.chartDuracionFases = new Chart(document.getElementById('chartDuracionFases'), {
     type:'bar',
     data:{
-      labels:phaseData.map(ph=>ph.nombre),
+      labels: phaseData.map(ph => ph.nombre),
       datasets:[
-        {label:'Plan',data:phaseData.map(ph=>ph.avgPlan),backgroundColor:phaseData.map(ph=>ph.color+'33'),borderColor:phaseData.map(ph=>ph.color+'99'),borderWidth:1,borderDash:[4,3]},
-        {label:'Real / Est.',data:phaseData.map(ph=>ph.avgReal),backgroundColor:phaseData.map(ph=>ph.color+'bb'),borderColor:phaseData.map(ph=>ph.color),borderWidth:1.5}
+        {label:'Plan', data:phaseData.map(ph=>ph.avgPlan), backgroundColor:phaseData.map(ph=>ph.color+'33'), borderColor:phaseData.map(ph=>ph.color+'99'), borderWidth:1, borderDash:[4,3]},
+        {label: isSingle ? 'Real / Est.' : 'Real / Est. (prom.)', data:phaseData.map(ph=>ph.avgReal), backgroundColor:phaseData.map(ph=>ph.color+'bb'), borderColor:phaseData.map(ph=>ph.color), borderWidth:1.5}
       ]
     },
     options:{
-      indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      indexAxis:'y', responsive:true, maintainAspectRatio:false,
       plugins:{
-        legend:{display:true,position:'top',labels:{font:{size:9},padding:12,boxWidth:10}},
+        legend:{display:true, position:'top', labels:{font:{size:9}, padding:12, boxWidth:10}},
         tooltip:{callbacks:{
-          title:ctx=>ctx[0].label,
-          label:ctx=>{
-            const ph=phaseData[ctx.dataIndex];
-            const isReal=ctx.datasetIndex===1;
-            const val=isReal?ph.avgReal:ph.avgPlan;
-            const n=isReal?ph.nReal:ph.nPlan;
-            if(val===null)return`${isReal?'Real/Est.':'Plan'}: sin datos`;
-            let line=`${isReal?'Real/Est.':'Plan'}: ${val} sem. (${n} proyectos)`;
-            if(isReal&&ph.avgPlan!==null&&ph.avgReal!==null){const ov=(((ph.avgReal-ph.avgPlan)/ph.avgPlan)*100).toFixed(0);line+=` · ${ov>0?'+':''}${ov}% vs plan`;}
+          title: ctx => ctx[0].label,
+          label: ctx => {
+            const ph = phaseData[ctx.dataIndex];
+            const isReal = ctx.datasetIndex === 1;
+            const val = isReal ? ph.avgReal : ph.avgPlan;
+            if(val === null) return `${isReal ? 'Real/Est.' : 'Plan'}: sin datos`;
+            let line = isSingle
+              ? `${isReal ? 'Real/Est.' : 'Plan'}: ${val} sem.`
+              : `${isReal ? 'Real/Est.' : 'Plan'}: ${val} sem. (${isReal ? ph.nReal : ph.nPlan} proy.)`;
+            if(isReal && ph.avgPlan !== null && ph.avgReal !== null){
+              const ov = (((ph.avgReal - ph.avgPlan) / ph.avgPlan) * 100).toFixed(0);
+              line += ` · ${ov > 0 ? '+' : ''}${ov}% vs plan`;
+            }
             return line;
           }
         }}
       },
       scales:{
-        x:{beginAtZero:true,grid:{color:'rgba(41,60,71,0.3)'},title:{display:true,text:'Semanas',color:'#5a5858',font:{size:9}},ticks:{font:{size:8}}},
-        y:{grid:{display:false},ticks:{font:{size:9}}}
+        x:{beginAtZero:true, grid:{color:'rgba(41,60,71,0.3)'}, title:{display:true, text:'Semanas', color:'#5a5858', font:{size:9}}, ticks:{font:{size:8}}},
+        y:{grid:{display:false}, ticks:{font:{size:9}}}
       }
     }
   });
