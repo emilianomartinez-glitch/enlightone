@@ -1,4 +1,4 @@
-# Enlight · Dashboard Proyectos FV
+# Enlight · Dashboard Proyectos FV - SAE
 
 Dashboard interactivo para monitoreo de proyectos fotovoltaicos y BESS.  
 Consume datos de Google Sheets vía n8n y se despliega en Vercel.
