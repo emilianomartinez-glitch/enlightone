@@ -440,6 +440,7 @@ html[data-theme="light"] .ms-panel { background:var(--surface); box-shadow:0 4px
 html[data-theme="light"] .dq-tooltip { background:var(--surface); box-shadow:0 4px 12px rgba(18,25,38,0.08); }
 html[data-theme="light"] .gantt-tooltip-box { background:#293C47; border-color:#293C47; color:rgba(255,255,255,0.9); box-shadow:0 4px 12px rgba(18,25,38,0.15); }
 html[data-theme="light"] .gantt-tooltip-box strong { color:var(--accent-bright); }
+html[data-theme="light"] .gantt-tooltip-box .tt-label { color:rgba(255,255,255,0.6); }
 html[data-theme="light"] .kpi-clickable:hover { box-shadow:0 4px 12px rgba(18,25,38,0.10); }
 html[data-theme="light"] .exec-card.clickable-card:hover { box-shadow:0 4px 12px rgba(18,25,38,0.10); }
 html[data-theme="light"] ::-webkit-scrollbar-thumb { background:#D0D5DB; }
@@ -2199,14 +2200,16 @@ function renderGantt() {
     }
 
     // Phase bars
+    const FASE_ESTATUS_LBL = { cumplido:'Cumplido', progreso:'En progreso', pronostico:'Pronóstico', pendiente:'Pendiente', sinfecha:'Sin fecha' };
     (p.fases || []).forEach(f => {
+      const estLbl = FASE_ESTATUS_LBL[f.estatus] || f.estatus || '—';
       if (f.planInicio && f.planFin) {
-        tbody += `<div class="gantt-bar gantt-bar-plan" style="left:${toLeft(f.planInicio)}%;width:${toWidth(f.planInicio, f.planFin)}%;border-color:${f.color}88;background:${f.color}12;" data-gantt-tip="<span class='tt-label'>Plan ${esc(f.nombre)}</span><br>${f.planInicio} → ${f.planFin}"></div>`;
+        tbody += `<div class="gantt-bar gantt-bar-plan" style="left:${toLeft(f.planInicio)}%;width:${toWidth(f.planInicio, f.planFin)}%;border-color:${f.color}88;background:${f.color}12;" data-gantt-tip="<strong>${esc(f.nombre)}</strong> <span class='tt-label'>· Plan</span><br>${f.planInicio} → ${f.planFin}<br>Estatus actual: ${estLbl}"></div>`;
       }
       if (f.fechaInicio && f.fechaFin) {
         const doneCls = closed ? ' gantt-bar-done' : '';
         const opacity = f.estatus === 'cumplido' ? (closed ? '0.35' : '0.8') : '0.55';
-        tbody += `<div class="gantt-bar${doneCls}" style="left:${toLeft(f.fechaInicio)}%;width:${toWidth(f.fechaInicio, f.fechaFin)}%;background:${f.color};opacity:${opacity};" data-gantt-tip="<strong>${esc(f.nombre)}</strong><br>${f.fechaInicio} → ${f.fechaFin}<br>Estatus: ${f.estatus || '—'}"></div>`;
+        tbody += `<div class="gantt-bar${doneCls}" style="left:${toLeft(f.fechaInicio)}%;width:${toWidth(f.fechaInicio, f.fechaFin)}%;background:${f.color};opacity:${opacity};" data-gantt-tip="<strong>${esc(f.nombre)}</strong><br>${f.fechaInicio} → ${f.fechaFin}<br>Estatus: ${estLbl}"></div>`;
       }
     });
 
