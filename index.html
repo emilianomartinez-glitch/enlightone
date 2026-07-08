@@ -619,6 +619,14 @@ html[data-theme="light"] .logo-light-mode { display:block !important; }
         </div>
       </div>
 
+      <div class="charts-row">
+        <div class="chart-card span2">
+          <div class="chart-title">Desviación en curso por hito (días)</div>
+          <div class="chart-desc">Hitos aún no cumplidos · días acumulados vs fecha base al día de hoy — crece a diario hasta cumplirse el hito</div>
+          <div class="chart-wrapper" style="height:240px"><canvas id="chartDesviacionAbierta"></canvas></div>
+        </div>
+      </div>
+
       <div class="section-label">Duración promedio por fase</div>
       <div class="charts-row">
         <div class="chart-card span2">
@@ -1188,7 +1196,7 @@ function renderAll() {
   renderChartHitos(); renderChartFases(); renderChartTipo(); renderChartProv();
   renderChartPM(); renderChartCuenta(); renderChartEntidad();
   renderChartSubcontratista();
-  renderKPIs2(); renderChartDesviacion(); renderChartDuracionFases(); renderChartRendPM(); renderTreemap(); renderChartCuentaRendimiento(); renderCuentaTable();
+  renderKPIs2(); renderChartDesviacion(); renderChartDesviacionAbierta(); renderChartDuracionFases(); renderChartRendPM(); renderTreemap(); renderChartCuentaRendimiento(); renderCuentaTable();
   renderTab3();
   renderTab4();
 
@@ -1666,6 +1674,16 @@ function renderKPIs2(){
 function renderChartDesviacion(){
   const data=[...(rawData.promedioDesviacionNeta||rawData.promedioDesviacion||[])].sort((a,b)=>b.promedioDias-a.promedioDias); destroyChart('chartDesviacion');
   charts.chartDesviacion=new Chart(document.getElementById('chartDesviacion'),{type:'bar',data:{labels:data.map(d=>trunc(d.hito,20)),datasets:[{data:data.map(d=>d.promedioDias),backgroundColor:data.map(d=>d.promedioDias>30?COLORS.danger+'cc':d.promedioDias>15?COLORS.warn+'cc':COLORS.accent+'88'),borderWidth:0}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,grid:{color:'rgba(41,60,71,0.3)'},title:{display:true,text:'Días',color:'#5a5858',font:{size:9}},ticks:{font:{size:8}}},y:{grid:{display:false},ticks:{font:{size:8}}}}}});
+}
+
+function renderChartDesviacionAbierta(){
+  const cvs=document.getElementById('chartDesviacionAbierta'); if(!cvs) return;
+  const data=[...(rawData.promedioDesviacionAbierta||[])].sort((a,b)=>b.promedioDias-a.promedioDias);
+  destroyChart('chartDesviacionAbierta');
+  const card=cvs.closest('.chart-card');
+  if(!data.length){ if(card) card.style.display='none'; return; }
+  if(card) card.style.display='';
+  charts.chartDesviacionAbierta=new Chart(cvs,{type:'bar',data:{labels:data.map(d=>trunc(d.hito,20)),datasets:[{data:data.map(d=>d.promedioDias),backgroundColor:data.map(d=>d.promedioDias>90?COLORS.danger+'cc':d.promedioDias>30?COLORS.warn+'cc':COLORS.accent+'88'),borderWidth:0}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>{const d=data[ctx.dataIndex];return `${d.promedioDias} días promedio · ${d.totalMuestras} hito${d.totalMuestras>1?'s':''} pendiente${d.totalMuestras>1?'s':''}`;}}}},scales:{x:{beginAtZero:true,grid:{color:'rgba(41,60,71,0.3)'},title:{display:true,text:'Días acumulados a hoy',color:'#5a5858',font:{size:9}},ticks:{font:{size:8}}},y:{grid:{display:false},ticks:{font:{size:8}}}}}});
 }
 
 function renderChartDuracionFases(){
