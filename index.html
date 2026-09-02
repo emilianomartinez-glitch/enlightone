@@ -334,6 +334,10 @@ header { padding:16px 28px 0; background:linear-gradient(180deg,rgba(0,170,133,0
 .intercon-ok { background:rgba(0,170,133,0.15); color:var(--accent); }
 .intercon-no { background:rgba(255,71,87,0.15); color:var(--danger); }
 
+/* ── Hitos detail panel (forecast tab, per-project drilldown) ── */
+.hitos-detail-table td { padding:4px 8px !important; font-size:9px; }
+.hitos-detail-table .hd-plan { color:var(--text3); font-size:9px; }
+
 @media (max-width:1100px) { .crono-kpi-grid{grid-template-columns:repeat(3,1fr);} }
 @media (max-width:900px) { .crono-kpi-grid{grid-template-columns:repeat(2,1fr);} }
 
@@ -2623,13 +2627,13 @@ function renderForecastHitosDetailPanel() {
   // Hitos previos al arranque de "Entrega Ingenierías" — solo tienen una fecha disponible
   // (no hay cascada Prevista/Tentativa/Modificada/Real para estos tres).
   const previos = [
-    { label: 'Kick Off interno PM/Inter áreas', fecha: pronostico?.kickOffInterno },
     { label: 'Cierre Comercial', fecha: desvRows[0]?.cierreComercial },
     { label: 'Pase a Operaciones (Estatuto)', fecha: proyecto.fechaInicioProyecto },
+    { label: 'Kick Off interno PM/Inter áreas', fecha: pronostico?.kickOffInterno },
   ];
   const previosHtml = previos.map(h => `<tr>
-      <td style="color:var(--text3);">${esc(h.label)}</td>
-      <td colspan="4" style="font-size:9px;color:var(--text3);">${fmtDate(h.fecha)}</td>
+      <td class="hd-plan">${esc(h.label)}</td>
+      <td colspan="4" class="hd-plan">${fmtDate(h.fecha)}</td>
     </tr>`).join('');
 
   const statusColors = { 'Atrasado': 'var(--danger)', 'Cumplido con retraso': 'var(--warn)', 'Pendiente': 'var(--pending)', 'Cumplido a tiempo': 'var(--accent)' };
@@ -2638,20 +2642,33 @@ function renderForecastHitosDetailPanel() {
     const c = statusColors[estatus] || 'var(--text3)';
     return `<span class="mini-badge" style="background:${c}18;color:${c};border:1px solid ${c}33;">${statusLabels[estatus] || estatus || '—'}</span>`;
   };
+  // Deviation color for Modificada/Real date text — same diasDesviacion field/thresholds
+  // used by desvCategory()/renderChartDesviacion() elsewhere in this file: on-plan/early
+  // reads as the brand "on time" green, moderate lateness as warn, severe as danger.
+  const desvDateColor = dias => {
+    if (dias === null || dias === undefined || isNaN(dias) || dias <= 0) return 'var(--accent)';
+    if (dias <= 30) return 'var(--warn)';
+    return 'var(--danger)';
+  };
 
   const rowsHtml = HITOS_NAMES.map(nombre => {
     const h = getHito(proyecto, nombre);
     const prevista = fmtDate(h?.fechaPlan);
     const tentativa = fmtDate(h?.fechaTentativa);
-    const modificadaCell = h?.fechaModificada ? fmtDate(h.fechaModificada) : statusBadge(h?.estatus);
+    const dCol = desvDateColor(h?.diasDesviacion);
+    const modificadaCell = h?.fechaModificada
+      ? `<span style="color:${dCol};font-weight:600;">${fmtDate(h.fechaModificada)}</span>`
+      : statusBadge(h?.estatus);
     const realDate = realByHito[nombre];
-    const realCell = realDate ? fmtDate(realDate) : statusBadge(h?.estatus);
+    const realCell = realDate
+      ? `<span style="color:${dCol};font-weight:600;">${fmtDate(realDate)}</span>`
+      : statusBadge(h?.estatus);
     return `<tr>
       <td>${esc(nombre)}</td>
-      <td style="font-size:9px;">${prevista}</td>
-      <td style="font-size:9px;">${tentativa}</td>
-      <td style="font-size:9px;">${modificadaCell}</td>
-      <td style="font-size:9px;">${realCell}</td>
+      <td class="hd-plan">${prevista}</td>
+      <td class="hd-plan">${tentativa}</td>
+      <td>${modificadaCell}</td>
+      <td>${realCell}</td>
     </tr>`;
   }).join('');
 
@@ -2665,14 +2682,14 @@ function renderForecastHitosDetailPanel() {
         <span style="cursor:pointer;color:var(--text3);font-size:14px;line-height:1;" onclick="forecastHitosDetailProj=null;renderForecastHitosDetailPanel();" title="Cerrar">✕</span>
       </div>
       <div class="table-scroll" style="max-height:400px;">
-        <table class="data-table">
+        <table class="data-table hitos-detail-table">
           <thead><tr>
             <th>Hito</th><th>Prevista</th><th>Tentativa</th><th>Modificada</th><th>Real</th>
           </tr></thead>
           <tbody>${previosHtml}</tbody>
         </table>
         <div class="detail-hitos-title" style="margin-top:6px;">Hitos del cronograma (13)</div>
-        <table class="data-table">
+        <table class="data-table hitos-detail-table">
           <thead><tr>
             <th>Hito</th><th>Prevista</th><th>Tentativa</th><th>Modificada</th><th>Real</th>
           </tr></thead>
