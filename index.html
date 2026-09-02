@@ -2521,7 +2521,16 @@ function renderScatterRatio() {
 }
 
 // Shared date formatter (forecast table + hitos detail panel)
-const fmtDate = d => d ? new Date(d).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: '2-digit' }) : '—';
+// Dates from the API are plain "YYYY-MM-DD" strings (no time component). Parsing them with
+// `new Date(str)` treats them as UTC midnight, and toLocaleDateString then renders in the
+// browser's local timezone — for Mexico (UTC-6) that rolls the displayed date back one day.
+// Parse the Y-M-D parts manually and build a local Date to avoid the UTC round-trip.
+const fmtDate = d => {
+  if (!d) return '—';
+  const [y, m, day] = String(d).split('-').map(Number);
+  if (!y || !m || !day) return '—';
+  return new Date(y, m - 1, day).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: '2-digit' });
+};
 
 // ── TABLA DE PRONÓSTICOS (v2: badge desviación, columna ratio, cerrados) ──
 function renderForecastTable() {
@@ -2604,10 +2613,24 @@ function renderForecastHitosDetailPanel() {
 
   const proyecto = (rawData.proyectos || []).find(p => p.proj === forecastHitosDetailProj);
   if (!proyecto) { el.innerHTML = ''; forecastHitosDetailProj = null; return; }
+  const pronostico = (filteredPronosticos || rawData.pronosticos || []).find(p => p.proj === forecastHitosDetailProj)
+    || (rawData.pronosticos || []).find(p => p.proj === forecastHitosDetailProj);
 
   const desvRows = (rawData.desviaciones || []).filter(d => d.proj === forecastHitosDetailProj);
   const realByHito = {};
   desvRows.forEach(d => { if (d.fechaReal) realByHito[d.hitoNombreDisplay] = d.fechaReal; });
+
+  // Hitos previos al arranque de "Entrega Ingenierías" — solo tienen una fecha disponible
+  // (no hay cascada Prevista/Tentativa/Modificada/Real para estos tres).
+  const previos = [
+    { label: 'Kick Off interno PM/Inter áreas', fecha: pronostico?.kickOffInterno },
+    { label: 'Cierre Comercial', fecha: desvRows[0]?.cierreComercial },
+    { label: 'Pase a Operaciones (Estatuto)', fecha: proyecto.fechaInicioProyecto },
+  ];
+  const previosHtml = previos.map(h => `<tr>
+      <td style="color:var(--text3);">${esc(h.label)}</td>
+      <td colspan="4" style="font-size:9px;color:var(--text3);">${fmtDate(h.fecha)}</td>
+    </tr>`).join('');
 
   const statusColors = { 'Atrasado': 'var(--danger)', 'Cumplido con retraso': 'var(--warn)', 'Pendiente': 'var(--pending)', 'Cumplido a tiempo': 'var(--accent)' };
   const statusLabels = { 'Atrasado': 'Atrasado', 'Cumplido con retraso': 'C. retraso', 'Pendiente': 'Pendiente', 'Cumplido a tiempo': 'A tiempo' };
@@ -2642,6 +2665,13 @@ function renderForecastHitosDetailPanel() {
         <span style="cursor:pointer;color:var(--text3);font-size:14px;line-height:1;" onclick="forecastHitosDetailProj=null;renderForecastHitosDetailPanel();" title="Cerrar">✕</span>
       </div>
       <div class="table-scroll" style="max-height:400px;">
+        <table class="data-table">
+          <thead><tr>
+            <th>Hito</th><th>Prevista</th><th>Tentativa</th><th>Modificada</th><th>Real</th>
+          </tr></thead>
+          <tbody>${previosHtml}</tbody>
+        </table>
+        <div class="detail-hitos-title" style="margin-top:6px;">Hitos del cronograma (13)</div>
         <table class="data-table">
           <thead><tr>
             <th>Hito</th><th>Prevista</th><th>Tentativa</th><th>Modificada</th><th>Real</th>
