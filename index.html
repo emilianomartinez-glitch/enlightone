@@ -4,9 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Enlight · Dashboard Proyectos </title>
-<link href="https://fonts.googleapis.com/css2?family=Alexandria:wght@300;400;500;600;700;800&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+<link rel="preload" href="fonts/Alexandria-VariableFont_wght.ttf" as="font" type="font/ttf" crossorigin>
+<link rel="preload" href="fonts/AlbertSans-VariableFont_wght.ttf" as="font" type="font/ttf" crossorigin>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
+/* Fuentes del DS autoalojadas (variables): sin dependencia de Google Fonts ni de Roboto, que no es fuente de marca */
+@font-face { font-family:'Alexandria'; src:url('fonts/Alexandria-VariableFont_wght.ttf') format('truetype'); font-weight:100 900; font-display:swap; }
+@font-face { font-family:'Albert Sans'; src:url('fonts/AlbertSans-VariableFont_wght.ttf') format('truetype'); font-weight:100 900; font-display:swap; }
 :root {
   --c1: #293C47; --c2: #00AA85; --c3: #3D7D80; --c4: #121926; --c5: #828080;
   --c1-40: rgba(41,60,71,0.4); --c2-40: rgba(0,170,133,0.4); --c3-40: rgba(61,125,128,0.4);
@@ -14,9 +18,9 @@
   --bg: #0c1117; --surface: #121926; --surface2: #1a2332;
   --border: #293C47; --border2: rgba(61,125,128,0.3);
   --accent: #00AA85; --accent-dim: rgba(0,170,133,0.15); --accent-bright: #00ddaa;
-  --warn: #ff9f43; --danger: #ff4757; --text: #e4e8ec; --text2: #828080; --text3: #9EA1A8;
+  --warn: #ff9f43; --danger: #ff4757; --text: #e4e8ec; --text2: #888686; /* Gris de marca aclarado ~3% para llegar a 4.5:1 sobre --surface (#828080 daba 4.48) */ --text3: #9EA1A8;
   --pending: #4c9fff; --teal: #3D7D80;
-  --font-display: 'Alexandria', sans-serif; --font-body: 'Roboto', sans-serif;
+  --font-display: 'Alexandria', sans-serif; --font-body: 'Albert Sans', system-ui, sans-serif;
 }
 * { margin:0; padding:0; box-sizing:border-box; }
 html { scroll-behavior:smooth; }
@@ -32,16 +36,16 @@ header { padding:16px 28px 0; background:linear-gradient(180deg,rgba(0,170,133,0
 .header-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
 .logo-area { display:flex; align-items:center; gap:12px; }
 .logo-mark { font-family:var(--font-display); font-weight:800; font-size:18px; color:var(--accent); }
-.logo-sub { font-family:var(--font-body); font-size:10px; color:var(--text2); letter-spacing:2px; text-transform:uppercase; }
+.logo-sub { font-family:var(--font-body); font-size:11px; color:var(--text2); letter-spacing:2px; text-transform:uppercase; }
 .header-meta { display:flex; align-items:center; gap:16px; }
-.live-badge { display:flex; align-items:center; gap:5px; font-size:9px; letter-spacing:2px; color:var(--accent); text-transform:uppercase; }
+.live-badge { display:flex; align-items:center; gap:5px; font-size:11px; letter-spacing:2px; color:var(--accent); text-transform:uppercase; }
 .live-dot { width:5px; height:5px; border-radius:50%; background:var(--accent); animation:pulse 2s infinite; }
 @keyframes pulse { 0%,100%{opacity:1;transform:scale(1);} 50%{opacity:.3;transform:scale(.6);} }
-.date-display { font-size:10px; color:var(--text2); }
-.refresh-btn { background:transparent; border:1px solid var(--border); color:var(--text2); font-family:var(--font-body); font-size:9px; letter-spacing:1px; text-transform:uppercase; padding:4px 10px; cursor:pointer; transition:all .2s; }
+.date-display { font-size:11px; color:var(--text2); }
+.refresh-btn { background:transparent; border:1px solid var(--border); color:var(--text2); font-family:var(--font-body); font-size:11px; letter-spacing:1px; text-transform:uppercase; padding:4px 10px; cursor:pointer; transition:all .2s; }
 .refresh-btn:hover { border-color:var(--accent); color:var(--accent); }
 .refresh-btn.loading { opacity:.5; pointer-events:none; }
-.last-update { font-size:9px; color:var(--text3); }
+.last-update { font-size:11px; color:var(--text3); }
 
 /* ── TABS ───────────────────────── */
 .tabs { display:flex; border-bottom:1px solid var(--border); }
@@ -58,16 +62,16 @@ header { padding:16px 28px 0; background:linear-gradient(180deg,rgba(0,170,133,0
 /* ── FILTERS ────────────────────── */
 .filters-bar { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px; align-items:center; }
 .filter-group { position:relative; }
-.filter-select { font-family:var(--font-body); font-size:10px; color:var(--text2); background:var(--surface); border:1px solid var(--border); padding:5px 24px 5px 10px; cursor:pointer; appearance:none; -webkit-appearance:none; min-width:120px; transition:border-color .2s; border-radius:2px; }
+.filter-select { font-family:var(--font-body); font-size:11px; color:var(--text2); background:var(--surface); border:1px solid var(--border); padding:5px 24px 5px 10px; cursor:pointer; appearance:none; -webkit-appearance:none; min-width:120px; transition:border-color .2s; border-radius:2px; }
 .filter-select:hover,.filter-select:focus { border-color:var(--accent); color:var(--text); outline:none; }
 .filter-group::after { content:'▾'; position:absolute; right:8px; top:50%; transform:translateY(-50%); font-size:7px; color:var(--text3); pointer-events:none; }
-.filter-reset { font-family:var(--font-body); font-size:9px; letter-spacing:1px; text-transform:uppercase; color:var(--text3); background:transparent; border:1px dashed var(--border); padding:5px 12px; cursor:pointer; transition:all .2s; border-radius:2px; }
+.filter-reset { font-family:var(--font-body); font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--text3); background:transparent; border:1px dashed var(--border); padding:5px 12px; cursor:pointer; transition:all .2s; border-radius:2px; }
 .filter-reset:hover { border-color:var(--danger); color:var(--danger); }
 
 /* ── ALERT BANNER ───────────────── */
 .alert-banner { margin:10 28px; padding:0; position:relative; z-index:250; }
 .alert-card { background:linear-gradient(135deg,rgba(255,159,67,0.06),rgba(255,159,67,0.02)); border:1px solid rgba(255,159,67,0.15); border-radius:2px; padding:10px 16px; margin-bottom:8px; margin-top:10px; }
-.alert-title { font-family:var(--font-display); font-weight:700; font-size:10px; letter-spacing:1px; text-transform:uppercase; margin-bottom:4px; display:flex; align-items:center; gap:6px; }
+.alert-title { font-family:var(--font-display); font-weight:700; font-size:11px; letter-spacing:1px; text-transform:uppercase; margin-bottom:4px; display:flex; align-items:center; gap:6px; }
 .alert-title .dot { width:6px; height:6px; border-radius:50%; }
 .alert-body { font-size:11px; color:var(--text); line-height:1.6; }
 .alert-body strong { font-weight:600; }
@@ -76,30 +80,30 @@ header { padding:16px 28px 0; background:linear-gradient(180deg,rgba(0,170,133,0
 
 /* ── SEARCHABLE FILTER ─────────── */
 .filter-search-wrap { position:relative; }
-.filter-search { font-family:var(--font-body); font-size:10px; color:var(--text2); background:var(--surface); border:1px solid var(--border); padding:5px 10px; min-width:160px; transition:border-color .2s; border-radius:2px; }
+.filter-search { font-family:var(--font-body); font-size:11px; color:var(--text2); background:var(--surface); border:1px solid var(--border); padding:5px 10px; min-width:160px; transition:border-color .2s; border-radius:2px; }
 .filter-search:hover,.filter-search:focus { border-color:var(--accent); color:var(--text); outline:none; }
 .filter-search::placeholder { color:var(--text3); }
 
 /* ── MULTI-SELECT DROPDOWN ─────── */
 .ms-dropdown { position:relative; display:inline-block; }
-.ms-toggle { font-family:var(--font-body); font-size:10px; color:var(--text2); background:var(--surface); border:1px solid var(--border); padding:5px 24px 5px 10px; cursor:pointer; min-width:120px; transition:border-color .2s; border-radius:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block; user-select:none; }
+.ms-toggle { font-family:var(--font-body); font-size:11px; color:var(--text2); background:var(--surface); border:1px solid var(--border); padding:5px 24px 5px 10px; cursor:pointer; min-width:120px; transition:border-color .2s; border-radius:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:block; user-select:none; }
 .ms-toggle:hover,.ms-toggle.open { border-color:var(--accent); color:var(--text); }
 .ms-toggle::after { content:'▾'; position:absolute; right:8px; top:50%; transform:translateY(-50%); font-size:7px; color:var(--text3); pointer-events:none; }
 .ms-toggle.has-selection { color:var(--accent); border-color:rgba(0,170,133,0.4); }
 .ms-panel { display:none; position:absolute; top:100%; left:0; z-index:100; background:var(--surface2); border:1px solid var(--border); border-radius:2px; min-width:180px; max-height:220px; overflow-y:auto; box-shadow:0 8px 24px rgba(0,0,0,0.5); margin-top:2px; }
 .ms-panel.open { display:block; }
-.ms-panel label { display:flex; align-items:center; gap:6px; padding:4px 10px; font-size:10px; color:var(--text2); cursor:pointer; transition:background .15s; white-space:nowrap; }
+.ms-panel label { display:flex; align-items:center; gap:6px; padding:4px 10px; font-size:11px; color:var(--text2); cursor:pointer; transition:background .15s; white-space:nowrap; }
 .ms-panel label:hover { background:rgba(0,170,133,0.08); color:var(--text); }
 .ms-panel input[type="checkbox"] { accent-color:var(--accent); width:12px; height:12px; cursor:pointer; }
 .ms-panel-search-wrap { position:sticky; top:0; background:var(--surface2); padding:6px 8px 4px; border-bottom:1px solid var(--border); z-index:1; }
-.ms-panel-search { font-family:var(--font-body); font-size:10px; color:var(--text); background:var(--surface); border:1px solid var(--border); border-radius:2px; padding:4px 8px; width:100%; box-sizing:border-box; outline:none; transition:border-color .2s; }
+.ms-panel-search { font-family:var(--font-body); font-size:11px; color:var(--text); background:var(--surface); border:1px solid var(--border); border-radius:2px; padding:4px 8px; width:100%; box-sizing:border-box; outline:none; transition:border-color .2s; }
 .ms-panel-search:focus { border-color:var(--accent); }
 .ms-panel-search::placeholder { color:var(--text3); }
-.ms-panel-no-match { padding:6px 10px; font-size:10px; color:var(--text3); font-style:italic; }
+.ms-panel-no-match { padding:6px 10px; font-size:11px; color:var(--text3); font-style:italic; }
 
 /* ── DATA QUALITY TOOLTIP ──────── */
 .dq-tooltip-trigger { cursor:help; position:relative; }
-.dq-tooltip { display:none; position:absolute; left:0; top:100%; z-index:500; background:var(--surface2); border:1px solid var(--border); border-radius:3px; padding:10px 14px; min-width:280px; max-width:420px; max-height:260px; overflow-y:auto; box-shadow:0 8px 24px rgba(0,0,0,0.6); margin-top:4px; font-size:10px; line-height:1.8; }
+.dq-tooltip { display:none; position:absolute; left:0; top:100%; z-index:500; background:var(--surface2); border:1px solid var(--border); border-radius:3px; padding:10px 14px; min-width:280px; max-width:420px; max-height:260px; overflow-y:auto; box-shadow:0 8px 24px rgba(0,0,0,0.6); margin-top:4px; font-size:11px; line-height:1.8; }
 .dq-tooltip.visible { display:block; animation:fadeUp .2s ease both; }
 .dq-tooltip-item { display:flex; justify-content:space-between; gap:12px; border-bottom:1px solid rgba(41,60,71,0.2); padding:2px 0; }
 .dq-tooltip-item:last-child { border-bottom:none; }
@@ -114,13 +118,13 @@ header { padding:16px 28px 0; background:linear-gradient(180deg,rgba(0,170,133,0
 .cuenta-row-parent { cursor:pointer; }
 .cuenta-row-parent:hover td { background:rgba(0,170,133,0.05); }
 .cuenta-row-parent.expanded td { background:rgba(0,170,133,0.04); border-bottom-color:transparent; }
-.cuenta-child-row td { background:var(--surface2) !important; font-size:9px; padding:4px 10px !important; }
+.cuenta-child-row td { background:var(--surface2) !important; font-size:11px; padding:4px 10px !important; }
 .cuenta-child-row:last-child td { border-bottom:1px solid var(--border); }
 .comment-cell { white-space:normal !important; max-width:200px; word-wrap:break-word; line-height:1.4; }
 
 .chart-filter-chip {
   display:inline-flex; align-items:center; gap:5px;
-  font-family:var(--font-body); font-size:9px; letter-spacing:1px;
+  font-family:var(--font-body); font-size:11px; letter-spacing:1px;
   color:var(--accent); background:var(--accent-dim);
   border:1px solid rgba(0,170,133,0.35); padding:4px 10px 4px 8px;
   border-radius:2px; cursor:pointer; transition:all .2s; text-transform:uppercase;
@@ -131,7 +135,7 @@ header { padding:16px 28px 0; background:linear-gradient(180deg,rgba(0,170,133,0
 .chart-card canvas { cursor:pointer; }
 
 /* ── SECTION LABEL ──────────────── */
-.section-label { font-family:var(--font-display); font-weight:600; font-size:9px; letter-spacing:2.5px; text-transform:uppercase; color:var(--text3); margin-bottom:10px; display:flex; align-items:center; gap:10px; }
+.section-label { font-family:var(--font-display); font-weight:600; font-size:11px; letter-spacing:2.5px; text-transform:uppercase; color:var(--text3); margin-bottom:10px; display:flex; align-items:center; gap:10px; }
 .section-label::after { content:''; flex:1; height:1px; background:var(--border); }
 
 /* ── KPI CARDS ──────────────────── */
@@ -145,6 +149,14 @@ header { padding:16px 28px 0; background:linear-gradient(180deg,rgba(0,170,133,0
 .kpi-card.c-neutral::before { background:var(--teal); }
 .kpi-card.c-spi::before { background:#9f7aff; }
 .kpi-card:hover { border-color:var(--teal); }
+/* Anillo de foco del DS (Jade 35%) — el navegador default no se ve sobre fondo oscuro */
+button:focus-visible, select:focus-visible, input:focus-visible, [tabindex]:focus-visible, .kpi-clickable:focus-visible { outline:none; box-shadow:0 0 0 3px rgba(0,170,133,.35); border-color:var(--accent); }
+/* Movimiento reducido: se conserva el cambio de estado (color/borde), se quitan pulso y desplazamientos */
+@media (prefers-reduced-motion: reduce) {
+  .live-dot { animation:none; }
+  .animate-in { animation:none !important; opacity:1 !important; transform:none !important; }
+  .kpi-clickable:hover { transform:none; }
+}
 .kpi-clickable { cursor:pointer; transition:all .2s; }
 .kpi-clickable:hover { transform:translateY(-2px); box-shadow:0 4px 12px rgba(0,0,0,0.3); }
 .kpi-clickable.active-filter { border-color:var(--accent) !important; box-shadow:0 0 0 1px var(--accent), 0 4px 12px rgba(0,170,133,0.15); }
@@ -162,7 +174,7 @@ header { padding:16px 28px 0; background:linear-gradient(180deg,rgba(0,170,133,0
   padding:12px 16px; display:flex; flex-direction:column; gap:6px;
 }
 .exec-card-title {
-  font-family:var(--font-display); font-weight:700; font-size:10px;
+  font-family:var(--font-display); font-weight:700; font-size:11px;
   letter-spacing:1.5px; text-transform:uppercase; color:var(--text2);
   display:flex; align-items:center; gap:6px;
 }
@@ -186,7 +198,7 @@ header { padding:16px 28px 0; background:linear-gradient(180deg,rgba(0,170,133,0
   display:grid; grid-template-columns:1fr 1fr; gap:10px;
 }
 .detail-hitos-title {
-  font-family:var(--font-display); font-weight:700; font-size:10px;
+  font-family:var(--font-display); font-weight:700; font-size:11px;
   color:var(--text2); letter-spacing:1px; text-transform:uppercase;
   margin-bottom:8px;
 }
@@ -194,7 +206,7 @@ header { padding:16px 28px 0; background:linear-gradient(180deg,rgba(0,170,133,0
   display:grid; grid-template-columns:180px 1fr 80px;
   align-items:center; gap:8px; padding:3px 0;
   border-bottom:1px solid rgba(41,60,71,0.2);
-  font-size:9px;
+  font-size:11px;
 }
 .hito-detail-row:last-child { border-bottom:none; }
 .hito-name-d { color:var(--text2); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -208,15 +220,16 @@ header { padding:16px 28px 0; background:linear-gradient(180deg,rgba(0,170,133,0
 .data-table tr.clickable-row { cursor:pointer; }
 .data-table tr.clickable-row:hover td { background:rgba(0,170,133,0.05); }
 .data-table tr.row-expanded td { background:rgba(0,170,133,0.04); border-bottom-color:transparent; }
-.kpi-label { font-family:var(--font-display); font-weight:500; font-size:8px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text2); margin-bottom:5px; }
-.kpi-value { font-family:var(--font-display); font-weight:800; font-size:28px; line-height:1; margin-bottom:2px; }
+.kpi-label { font-family:var(--font-display); font-weight:500; font-size:11px; letter-spacing:1.2px; text-transform:uppercase; color:var(--text2); margin-bottom:6px; }
+/* tabular-nums: los KPIs se comparan entre tarjetas y entre filtros; dígitos de ancho fijo evitan que el valor "baile" */
+.kpi-value { font-family:var(--font-display); font-weight:800; font-size:28px; line-height:1; margin-bottom:4px; font-variant-numeric:tabular-nums; }
 .kpi-card.c-danger .kpi-value { color:var(--danger); }
 .kpi-card.c-warn .kpi-value { color:var(--warn); }
 .kpi-card.c-pending .kpi-value { color:var(--pending); }
 .kpi-card.c-accent .kpi-value { color:var(--accent); }
 .kpi-card.c-neutral .kpi-value { color:var(--text); }
 .kpi-card.c-spi .kpi-value { color:#9f7aff; }
-.kpi-sub { font-size:10px; color:var(--text3); }
+.kpi-sub { font-size:11px; color:var(--text3); }
 
 /* ── CHART GRID ─────────────────── */
 .charts-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; }
@@ -225,7 +238,7 @@ header { padding:16px 28px 0; background:linear-gradient(180deg,rgba(0,170,133,0
 .chart-card { background:var(--surface); border:1px solid var(--border); padding:14px 16px; border-radius:3px; }
 .chart-card.span2 { grid-column:span 2; }
 .chart-title { font-family:var(--font-display); font-weight:700; font-size:11px; margin-bottom:2px; color:var(--text); }
-.chart-desc { font-size:9px; color:var(--text3); margin-bottom:10px; }
+.chart-desc { font-size:11px; line-height:1.4; color:var(--text3); margin-bottom:10px; }
 .chart-wrapper { position:relative; width:100%; }
 .chart-wrapper canvas { width:100% !important; }
 
@@ -233,17 +246,17 @@ header { padding:16px 28px 0; background:linear-gradient(180deg,rgba(0,170,133,0
 .table-card { background:var(--surface); border:1px solid var(--border); overflow:hidden; border-radius:3px; }
 .table-header { padding:10px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; background:var(--surface2); }
 .table-title { font-family:var(--font-display); font-weight:700; font-size:12px; }
-.table-count { font-size:10px; color:var(--text2); margin-left:8px; }
+.table-count { font-size:11px; color:var(--text2); margin-left:8px; }
 .table-scroll { overflow-x:auto; max-height:360px; overflow-y:auto; }
 .data-table { width:100%; border-collapse:collapse; font-size:11px; }
-.data-table th { padding:7px 10px; text-align:left; font-family:var(--font-display); font-weight:600; font-size:8px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text3); border-bottom:1px solid var(--border); white-space:nowrap; background:var(--surface2); position:sticky; top:0; cursor:pointer; user-select:none; transition:color .15s; z-index:2; }
+.data-table th { padding:7px 10px; text-align:left; font-family:var(--font-display); font-weight:600; font-size:11px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text3); border-bottom:1px solid var(--border); white-space:nowrap; background:var(--surface2); position:sticky; top:0; cursor:pointer; user-select:none; transition:color .15s; z-index:2; }
 .data-table th:hover { color:var(--accent); }
 .data-table th.sorted { color:var(--accent); }
-.data-table th .sort-arrow { margin-left:3px; font-size:7px; }
-.data-table td { padding:6px 10px; border-bottom:1px solid rgba(41,60,71,0.3); white-space:nowrap; color:var(--text); font-size:10px;overflow: hidden; text-overflow: ellipsis; }
+.data-table th .sort-arrow { margin-left:3px; font-size:11px; }
+.data-table td { padding:6px 10px; border-bottom:1px solid rgba(41,60,71,0.3); white-space:nowrap; color:var(--text); font-size:11px;overflow: hidden; text-overflow: ellipsis; }
 .data-table tr:hover td { background:rgba(0,170,133,0.03); }
-.proj-id { font-family:var(--font-display); font-weight:700; color:var(--accent); font-size:10px; }
-.mini-badge { font-size:9px; padding:1px 6px; letter-spacing:.3px; display:inline-block; min-width:20px; text-align:center; border-radius:2px; }
+.proj-id { font-family:var(--font-display); font-weight:700; color:var(--accent); font-size:11px; }
+.mini-badge { font-size:11px; padding:1px 6px; letter-spacing:.3px; display:inline-block; min-width:20px; text-align:center; border-radius:2px; }
 .badge-danger { background:rgba(255,71,87,0.12); color:var(--danger); border:1px solid rgba(255,71,87,0.2); }
 .badge-warn { background:rgba(255,159,67,0.12); color:var(--warn); border:1px solid rgba(255,159,67,0.2); }
 .badge-pending { background:rgba(76,159,255,0.12); color:var(--pending); border:1px solid rgba(76,159,255,0.2); }
@@ -252,7 +265,7 @@ header { padding:16px 28px 0; background:linear-gradient(180deg,rgba(0,170,133,0
 .progress-cell { display:flex; align-items:center; gap:6px; }
 .mini-bar { width:48px; height:3px; background:var(--border); position:relative; overflow:hidden; border-radius:1px; }
 .mini-bar-fill { height:100%; background:var(--accent); position:absolute; left:0; top:0; transition:width .6s ease; }
-.progress-pct { font-size:9px; color:var(--text2); min-width:28px; }
+.progress-pct { font-size:11px; color:var(--text2); min-width:28px; }
 
 /* SPI gauge mini */
 .spi-indicator { display:inline-flex; align-items:center; gap:4px; }
@@ -275,37 +288,37 @@ header { padding:16px 28px 0; background:linear-gradient(180deg,rgba(0,170,133,0
 .loading-spinner .bar { width:100px; height:2px; background:var(--border); margin:0 auto; overflow:hidden; position:relative; }
 .loading-spinner .bar::after { content:''; position:absolute; width:36px; height:100%; background:var(--accent); animation:loadSlide 1s ease infinite; }
 @keyframes loadSlide { 0%{left:-36px;} 100%{left:100px;} }
-.loading-text { font-size:10px; color:var(--text3); letter-spacing:2px; text-transform:uppercase; margin-top:12px; }
+.loading-text { font-size:11px; color:var(--text3); letter-spacing:2px; text-transform:uppercase; margin-top:12px; }
 
 /* ── TAB 3: CRONOGRAMA Y PRONÓSTICO ── */
 .crono-corte-badge {
   display:inline-flex; align-items:center; gap:6px;
-  font-family:var(--font-display); font-size:10px; font-weight:600;
+  font-family:var(--font-display); font-size:11px; font-weight:600;
   color:var(--text); background:var(--surface); border:1px solid var(--border);
   padding:6px 14px; border-radius:3px; margin-bottom:14px;
   letter-spacing:0.5px;
 }
 .crono-corte-badge .corte-dot { width:6px; height:6px; border-radius:50%; background:var(--accent); }
-.crono-corte-badge .corte-label { font-size:8px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text2); }
+.crono-corte-badge .corte-label { font-size:11px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text2); }
 
 .crono-kpi-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin-bottom:16px; }
 
 .gantt-controls { display:flex; gap:8px; align-items:center; margin-bottom:10px; flex-wrap:wrap; }
-.gantt-search { font-family:var(--font-body); font-size:10px; color:var(--text); background:var(--surface); border:1px solid var(--border); padding:5px 10px; min-width:200px; border-radius:2px; }
+.gantt-search { font-family:var(--font-body); font-size:11px; color:var(--text); background:var(--surface); border:1px solid var(--border); padding:5px 10px; min-width:200px; border-radius:2px; }
 .gantt-search:focus { border-color:var(--accent); outline:none; }
-.gantt-zoom { font-family:var(--font-body); font-size:8px; letter-spacing:1px; text-transform:uppercase; color:var(--text2); background:var(--surface); border:1px solid var(--border); padding:4px 10px; cursor:pointer; border-radius:2px; transition:all .2s; }
+.gantt-zoom { font-family:var(--font-body); font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--text2); background:var(--surface); border:1px solid var(--border); padding:4px 10px; cursor:pointer; border-radius:2px; transition:all .2s; }
 .gantt-zoom:hover { border-color:var(--accent); color:var(--accent); }
 .gantt-zoom.active { color:var(--accent); border-color:var(--accent); background:var(--accent-dim); }
-.gantt-sort { font-family:var(--font-body); font-size:8px; letter-spacing:1px; text-transform:uppercase; color:var(--text2); background:var(--surface); border:1px solid var(--border); padding:4px 10px; cursor:pointer; border-radius:2px; transition:all .2s; }
+.gantt-sort { font-family:var(--font-body); font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--text2); background:var(--surface); border:1px solid var(--border); padding:4px 10px; cursor:pointer; border-radius:2px; transition:all .2s; }
 .gantt-sort:hover { border-color:var(--accent); color:var(--accent); }
 .gantt-sort.active { color:var(--accent); border-color:var(--accent); background:var(--accent-dim); }
 
 .gantt-container { background:var(--surface); border:1px solid var(--border); border-radius:3px; overflow-x:auto; overflow-y:auto; max-height:520px; position:relative; }
 .gantt-table { border-collapse:collapse; width:max-content; min-width:100%; }
-.gantt-table thead th { position:sticky; top:0; z-index:3; background:var(--surface2); font-family:var(--font-display); font-weight:600; font-size:7px; letter-spacing:1px; text-transform:uppercase; color:var(--text3); padding:4px 2px; border-bottom:1px solid var(--border); text-align:center; white-space:nowrap; }
+.gantt-table thead th { position:sticky; top:0; z-index:3; background:var(--surface2); font-family:var(--font-display); font-weight:600; font-size:11px; letter-spacing:1px; text-transform:uppercase; color:var(--text3); padding:4px 2px; border-bottom:1px solid var(--border); text-align:center; white-space:nowrap; }
 .gantt-table thead th.gantt-label-col { position:sticky; left:0; z-index:4; background:var(--surface2); text-align:left; padding-left:10px; min-width:180px; }
 .gantt-table tbody td { padding:0; height:24px; border-bottom:1px solid rgba(41,60,71,0.15); position:relative; }
-.gantt-table tbody td.gantt-label-cell { position:sticky; left:0; z-index:2; background:var(--surface); padding:3px 10px; font-size:9px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:180px; cursor:default; }
+.gantt-table tbody td.gantt-label-cell { position:sticky; left:0; z-index:2; background:var(--surface); padding:3px 10px; font-size:11px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:180px; cursor:default; }
 .gantt-month-sep { border-left:1px solid rgba(41,60,71,0.3); }
 .gantt-today { position:absolute; top:0; bottom:0; width:2px; background:var(--danger); z-index:1; opacity:.7; pointer-events:none; }
 .gantt-bar { position:absolute; top:4px; height:16px; border-radius:2px; min-width:2px; cursor:pointer; }
@@ -313,14 +326,14 @@ header { padding:16px 28px 0; background:linear-gradient(180deg,rgba(0,170,133,0
 .gantt-bar-plan { top:6px; height:12px; border:1.5px dashed; opacity:.55; }
 .gantt-bar-done { opacity:.35 !important; }
 .gantt-bar-hito { width:8px; height:8px; top:8px; border-radius:50%; border:1.5px solid rgba(255,255,255,.8); margin-left:-4px; z-index:2; }
-.gantt-tooltip-box { position:fixed; z-index:9999; background:var(--surface2); border:1px solid var(--border); border-radius:3px; padding:8px 12px; font-size:9px; color:var(--text); pointer-events:none; max-width:300px; line-height:1.6; box-shadow:0 4px 16px rgba(0,0,0,.5); }
+.gantt-tooltip-box { position:fixed; z-index:9999; background:var(--surface2); border:1px solid var(--border); border-radius:3px; padding:8px 12px; font-size:11px; color:var(--text); pointer-events:none; max-width:300px; line-height:1.6; box-shadow:0 4px 16px rgba(0,0,0,.5); }
 .gantt-tooltip-box strong { color:var(--accent); }
-.gantt-tooltip-box .tt-label { color:var(--text2); font-size:8px; text-transform:uppercase; letter-spacing:1px; }
+.gantt-tooltip-box .tt-label { color:var(--text2); font-size:11px; text-transform:uppercase; letter-spacing:1px; }
 
 .scatter-card { background:var(--surface); border:1px solid var(--border); border-radius:3px; padding:14px 16px; }
 
-.forecast-table { width:100%; border-collapse:collapse; font-size:10px; }
-.forecast-table th { padding:6px 8px; text-align:left; font-family:var(--font-display); font-weight:600; font-size:8px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text3); border-bottom:1px solid var(--border); background:var(--surface2); position:sticky; top:0; z-index:2; cursor:pointer; user-select:none; white-space:nowrap; transition:color .15s; }
+.forecast-table { width:100%; border-collapse:collapse; font-size:11px; }
+.forecast-table th { padding:6px 8px; text-align:left; font-family:var(--font-display); font-weight:600; font-size:11px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text3); border-bottom:1px solid var(--border); background:var(--surface2); position:sticky; top:0; z-index:2; cursor:pointer; user-select:none; white-space:nowrap; transition:color .15s; }
 .forecast-table th:hover { color:var(--accent); }
 .forecast-table th.sorted { color:var(--accent); }
 .forecast-table td { padding:5px 8px; border-bottom:1px solid rgba(41,60,71,0.2); white-space:nowrap; }
@@ -328,21 +341,21 @@ header { padding:16px 28px 0; background:linear-gradient(180deg,rgba(0,170,133,0
 .forecast-table tr.clickable-row { cursor:pointer; }
 .forecast-table tr.clickable-row:hover td { background:rgba(0,170,133,0.05); }
 .forecast-table tr.row-expanded td { background:rgba(0,170,133,0.04); border-bottom-color:transparent; }
-.desv-badge { font-size:8px; padding:1px 6px; border-radius:2px; font-weight:600; display:inline-block; min-width:42px; text-align:center; }
+.desv-badge { font-size:11px; padding:1px 6px; border-radius:2px; font-weight:600; display:inline-block; min-width:42px; text-align:center; }
 .desv-critico { background:rgba(255,71,87,0.12); color:var(--danger); border:1px solid rgba(255,71,87,0.2); }
 .desv-alto { background:rgba(255,159,67,0.12); color:var(--warn); border:1px solid rgba(255,159,67,0.2); }
 .desv-moderado { background:rgba(76,159,255,0.12); color:var(--pending); border:1px solid rgba(76,159,255,0.2); }
 .desv-control { background:rgba(0,170,133,0.12); color:var(--accent); border:1px solid rgba(0,170,133,0.2); }
-.intercon-check { display:inline-block; width:16px; height:16px; line-height:16px; text-align:center; border-radius:2px; font-size:9px; font-weight:700; }
+.intercon-check { display:inline-block; width:16px; height:16px; line-height:16px; text-align:center; border-radius:2px; font-size:11px; font-weight:700; }
 .intercon-ok { background:rgba(0,170,133,0.15); color:var(--accent); }
 .intercon-no { background:rgba(255,71,87,0.15); color:var(--danger); }
 
 /* ── Hitos detail panel (forecast tab, per-project drilldown) ── */
-.hitos-detail-table td { padding:4px 8px !important; font-size:9px; }
-.hitos-detail-table .hd-plan { color:var(--text3); font-size:9px; }
+.hitos-detail-table td { padding:4px 8px !important; font-size:11px; }
+.hitos-detail-table .hd-plan { color:var(--text3); font-size:11px; }
 .previos-cards-row { display:flex; gap:8px; margin-bottom:10px; }
 .previo-card { background:var(--surface); border:1px solid var(--border); border-radius:3px; padding:6px 10px; flex:1; min-width:0; }
-.previo-card-label { font-family:var(--font-display); font-weight:500; font-size:8px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text2); margin-bottom:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.previo-card-label { font-family:var(--font-display); font-weight:500; font-size:11px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text2); margin-bottom:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .previo-card-value { font-family:var(--font-display); font-weight:600; font-size:11px; color:var(--text); }
 
 @media (max-width:1100px) { .crono-kpi-grid{grid-template-columns:repeat(3,1fr);} }
@@ -354,12 +367,12 @@ header { padding:16px 28px 0; background:linear-gradient(180deg,rgba(0,170,133,0
 }
 .insights-timestamp-badge {
   display:inline-flex; align-items:center; gap:6px;
-  font-family:var(--font-display); font-size:10px; font-weight:600;
+  font-family:var(--font-display); font-size:11px; font-weight:600;
   color:var(--text); background:var(--surface); border:1px solid var(--border);
   padding:6px 14px; border-radius:3px; letter-spacing:0.5px;
 }
 .insights-timestamp-badge .ts-dot { width:6px; height:6px; border-radius:50%; background:var(--accent); }
-.insights-timestamp-badge .ts-label { font-size:8px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text2); }
+.insights-timestamp-badge .ts-label { font-size:11px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text2); }
 
 .insights-section-title {
   font-family:var(--font-display); font-weight:700; font-size:11px;
@@ -385,7 +398,7 @@ header { padding:16px 28px 0; background:linear-gradient(180deg,rgba(0,170,133,0
 .insight-card.card-positivo::before { background:var(--accent); }
 
 .insight-tipo-badge {
-  font-family:var(--font-display); font-size:7px; font-weight:700;
+  font-family:var(--font-display); font-size:11px; font-weight:700;
   letter-spacing:1.5px; text-transform:uppercase; padding:2px 8px;
   border-radius:2px; display:inline-block; margin-bottom:8px;
 }
@@ -401,7 +414,7 @@ header { padding:16px 28px 0; background:linear-gradient(180deg,rgba(0,170,133,0
 }
 
 .insight-section-label {
-  font-family:var(--font-display); font-size:7px; font-weight:600;
+  font-family:var(--font-display); font-size:11px; font-weight:600;
   letter-spacing:1.5px; text-transform:uppercase; color:var(--text3);
   margin-bottom:3px; margin-top:10px;
 }
@@ -410,7 +423,7 @@ header { padding:16px 28px 0; background:linear-gradient(180deg,rgba(0,170,133,0
 .insight-text {
   font-size:11px; color:var(--text); line-height:1.6;
 }
-.insight-text.text-evidencia { color:var(--text2); font-size:10px; }
+.insight-text.text-evidencia { color:var(--text2); font-size:11px; }
 .insight-text.text-recomendacion { color:var(--accent-bright); font-size:11px; font-weight:500; }
 
 .insights-empty {
@@ -421,7 +434,7 @@ header { padding:16px 28px 0; background:linear-gradient(180deg,rgba(0,170,133,0
 
 @media (max-width:900px) { .insights-grid{grid-template-columns:1fr;} }
   
-footer { padding:10px 28px; border-top:1px solid var(--border); display:flex; justify-content:space-between; font-size:9px; color:var(--text3); letter-spacing:1px; }
+footer { padding:10px 28px; border-top:1px solid var(--border); display:flex; justify-content:space-between; font-size:11px; color:var(--text3); letter-spacing:1px; }
 
 @keyframes fadeUp { from{opacity:0;transform:translateY(8px);} to{opacity:1;transform:translateY(0);} }
 .animate-in { animation:fadeUp .35s ease both; }
@@ -497,18 +510,18 @@ html[data-theme="light"] .login-card { box-shadow:0 8px 28px rgba(18,25,38,0.10)
 }
 .btn-google:hover { box-shadow:0 2px 8px rgba(0,0,0,0.2); }
 .btn-google svg { width:16px; height:16px; }
-.login-footer { margin-top:18px; font-size:9px; letter-spacing:.5px; color:var(--text3); }
-.login-error { margin-top:14px; font-size:10px; color:var(--danger); }
+.login-footer { margin-top:18px; font-size:11px; letter-spacing:.5px; color:var(--text3); }
+.login-error { margin-top:14px; font-size:11px; color:var(--danger); }
 
 .user-chip { display:flex; align-items:center; gap:8px; }
 .user-avatar {
   width:24px; height:24px; border-radius:50%; background:var(--accent-dim); color:var(--accent);
-  font-family:var(--font-display); font-weight:700; font-size:9px;
+  font-family:var(--font-display); font-weight:700; font-size:11px;
   display:flex; align-items:center; justify-content:center; flex-shrink:0;
 }
-.user-name { font-size:10px; color:var(--text2); max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.user-name { font-size:11px; color:var(--text2); max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .btn-logout {
-  background:transparent; border:1px solid var(--border); color:var(--text2); font-size:9px;
+  background:transparent; border:1px solid var(--border); color:var(--text2); font-size:11px;
   letter-spacing:.5px; text-transform:uppercase; padding:5px 9px; cursor:pointer; border-radius:2px; transition:all .2s;
 }
 .btn-logout:hover { border-color:var(--danger); color:var(--danger); }
@@ -570,11 +583,11 @@ html[data-theme="light"] .login-card { box-shadow:0 8px 28px rgba(18,25,38,0.10)
         </div>
       </div>
     </div>
-    <div class="tabs">
-      <button class="tab-btn active" data-tab="tab1">Estado General</button>
-      <button class="tab-btn" data-tab="tab2">Rendimiento y Desviaciones</button>
-      <button class="tab-btn" data-tab="tab3">Cronograma y Pronóstico</button>
-      <button class="tab-btn" data-tab="tab4">Insights IA</button>
+    <div class="tabs" role="tablist" aria-label="Secciones del dashboard">
+      <button class="tab-btn active" role="tab" aria-selected="true" aria-controls="tab1" data-tab="tab1">Estado General</button>
+      <button class="tab-btn" role="tab" aria-selected="false" aria-controls="tab2" tabindex="-1" data-tab="tab2">Rendimiento y Desviaciones</button>
+      <button class="tab-btn" role="tab" aria-selected="false" aria-controls="tab3" tabindex="-1" data-tab="tab3">Cronograma y Pronóstico</button>
+      <button class="tab-btn" role="tab" aria-selected="false" aria-controls="tab4" tabindex="-1" data-tab="tab4">Insights IA</button>
 
     </div>
   </header>
@@ -686,14 +699,14 @@ html[data-theme="light"] .login-card { box-shadow:0 8px 28px rgba(18,25,38,0.10)
     <div class="tab-content" id="tab2">
       <div class="filters-bar" id="filtersBar2"></div>
       <div class="section-label">Indicadores de rendimiento</div>
-      <div class="kpi-grid" id="kpiGrid2" style="grid-template-columns:repeat(4,1fr);"></div>
+      <div class="kpi-grid" id="kpiGrid2"></div>
 
       <div class="section-label">Análisis de desviaciones</div>
       <div class="charts-row">
         <div class="chart-card">
           <div class="chart-title">Desviación neta promedio por hito (días)</div>
           <div class="chart-desc">Descontando días On Hold · mayor desviación respecto a fecha base</div>
-          <div class="chart-wrapper" style="height:260px"><canvas id="chartDesviacion"></canvas></div>
+          <div class="chart-wrapper" style="height:260px"><canvas id="chartDesviacion" role="img" aria-label="Desviación neta promedio por hito, en días, de hitos ya cumplidos"></canvas></div>
         </div>
         <div class="chart-card">
           <div class="chart-title">Rendimiento por cuenta</div>
@@ -711,8 +724,8 @@ html[data-theme="light"] .login-card { box-shadow:0 8px 28px rgba(18,25,38,0.10)
         </div>
         <div class="chart-card">
           <div class="chart-title">Desviación en curso por hito (días)</div>
-          <div class="chart-desc">Hitos aún no cumplidos · días acumulados vs fecha base a hoy — crece a diario hasta cumplirse</div>
-          <div class="chart-wrapper" style="height:240px"><canvas id="chartDesviacionAbierta"></canvas></div>
+          <div class="chart-desc">Hitos aún no cumplidos · días acumulados vs fecha base a hoy, descontando On Hold — crece a diario hasta cumplirse</div>
+          <div class="chart-wrapper" style="height:240px"><canvas id="chartDesviacionAbierta" role="img" aria-label="Desviación neta en curso por hito, en días, de hitos aún no cumplidos"></canvas></div>
         </div>
       </div>
 
@@ -765,11 +778,11 @@ html[data-theme="light"] .login-card { box-shadow:0 8px 28px rgba(18,25,38,0.10)
         <input type="text" class="gantt-search" id="ganttSearch" placeholder="Buscar proyecto o cuenta…">
         <button class="gantt-sort active" data-gsort="commissioning" onclick="setGanttSort('commissioning')">Por commissioning</button>
         <button class="gantt-sort" data-gsort="inicio" onclick="setGanttSort('inicio')">Por inicio</button>
-        <span style="margin-left:8px;color:var(--text3);font-size:8px;">|</span>
+        <span style="margin-left:8px;color:var(--text3);font-size:11px;">|</span>
         <button class="gantt-zoom active" data-zoom="month" onclick="setGanttZoom('month')">Mes</button>
         <button class="gantt-zoom" data-zoom="quarter" onclick="setGanttZoom('quarter')">Trim</button>
         <button class="gantt-zoom" data-zoom="year" onclick="setGanttZoom('year')">Año</button>
-        <span style="margin-left:auto;font-size:8px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;display:flex;align-items:center;gap:10px;">
+        <span style="margin-left:auto;font-size:11px;color:var(--text3);letter-spacing:1px;text-transform:uppercase;display:flex;align-items:center;gap:10px;">
           <span><span style="display:inline-block;width:12px;height:5px;background:var(--accent);border-radius:1px;vertical-align:middle;margin-right:3px;opacity:.8;"></span>Real</span>
           <span><span style="display:inline-block;width:12px;height:5px;border:1px dashed var(--text3);border-radius:1px;vertical-align:middle;margin-right:3px;"></span>Plan</span>
           <span><span style="display:inline-block;width:12px;height:5px;background:var(--accent);border-radius:1px;vertical-align:middle;margin-right:3px;opacity:.35;"></span>Cerrado</span>
@@ -966,7 +979,7 @@ function toggleKpiFilter(key) {
 
 Chart.defaults.color = '#828080';
 Chart.defaults.borderColor = 'rgba(41,60,71,0.5)';
-Chart.defaults.font.family = "'Roboto', sans-serif";
+Chart.defaults.font.family = "'Albert Sans', system-ui, sans-serif";
 Chart.defaults.font.size = 10;
 Chart.defaults.plugins.legend.labels.boxWidth = 8;
 Chart.defaults.plugins.legend.labels.padding = 10;
@@ -975,7 +988,7 @@ Chart.defaults.plugins.tooltip.backgroundColor = '#1a2332';
 Chart.defaults.plugins.tooltip.borderColor = '#293C47';
 Chart.defaults.plugins.tooltip.borderWidth = 1;
 Chart.defaults.plugins.tooltip.titleFont = { family:"'Alexandria',sans-serif", weight:700, size:11 };
-Chart.defaults.plugins.tooltip.bodyFont = { family:"'Roboto',sans-serif", size:10 };
+Chart.defaults.plugins.tooltip.bodyFont = { family:"'Albert Sans',system-ui,sans-serif", size:11 };
 Chart.defaults.plugins.tooltip.padding = 8;
 Chart.defaults.plugins.tooltip.cornerRadius = 3;
 
@@ -1090,12 +1103,22 @@ function renderDate() {
 }
 
 function initTabs() {
-  document.querySelectorAll('.tab-btn').forEach(btn => {
+  const btns = [...document.querySelectorAll('.tab-btn')];
+  document.querySelectorAll('.tab-content').forEach(c=>c.setAttribute('role','tabpanel'));
+  btns.forEach(btn => {
     btn.addEventListener('click', () => {
-      document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+      btns.forEach(b=>{ b.classList.remove('active'); b.setAttribute('aria-selected','false'); b.tabIndex=-1; });
       document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
-      btn.classList.add('active');
+      btn.classList.add('active'); btn.setAttribute('aria-selected','true'); btn.tabIndex=0;
       document.getElementById(btn.dataset.tab).classList.add('active');
+    });
+    // Patrón WAI-ARIA tabs: flechas/Home/End mueven entre pestañas (solo la activa entra por Tab)
+    btn.addEventListener('keydown', e => {
+      const i = btns.indexOf(btn);
+      const next = e.key==='ArrowRight' ? btns[(i+1)%btns.length]
+                 : e.key==='ArrowLeft' ? btns[(i-1+btns.length)%btns.length]
+                 : e.key==='Home' ? btns[0] : e.key==='End' ? btns[btns.length-1] : null;
+      if (next) { e.preventDefault(); next.focus(); next.click(); }
     });
   });
 }
@@ -1399,10 +1422,10 @@ function renderAlertBanner() {
       <div class="alert-title" style="color:var(--warn)"><span class="dot" style="background:var(--warn)"></span>Calidad de datos</div>
       <div class="alert-body">${parts.join(' · ')} — <span class="hl-muted">estos proyectos se excluyen de las métricas de rendimiento por información incompleta</span></div>
       <div class="dq-tooltip" id="dqTooltip" role="tooltip">
-        <div style="font-family:var(--font-display);font-weight:700;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--text2);margin-bottom:6px;">Proyectos afectados (${affected.length})</div>
+        <div style="font-family:var(--font-display);font-weight:700;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text2);margin-bottom:6px;">Proyectos afectados (${affected.length})</div>
         <div style="display:flex;justify-content:space-between;gap:12px;margin-bottom:4px;border-bottom:1px solid var(--border);padding-bottom:3px;">
-          <span style="font-size:8px;letter-spacing:1px;color:var(--text3);text-transform:uppercase;">PROJ</span>
-          <span style="font-size:8px;letter-spacing:1px;color:var(--text3);text-transform:uppercase;">PM</span>
+          <span style="font-size:11px;letter-spacing:1px;color:var(--text3);text-transform:uppercase;">PROJ</span>
+          <span style="font-size:11px;letter-spacing:1px;color:var(--text3);text-transform:uppercase;">PM</span>
         </div>
         ${tooltipRows}
       </div>
@@ -1461,7 +1484,7 @@ function renderExecSummary() {
 
   document.getElementById('execSummary').innerHTML = `
     <div class="exec-card clickable-card${saludFilter ? ' salud-active' : ''}" onclick="toggleSaludFilter()" title="Click para filtrar solo proyectos con hitos atrasados">
-      <div class="exec-card-title"><span class="dot" style="${spiDot}"></span>Salud del portafolio${saludFilter ? ' <span style="font-size:7px;color:var(--accent);font-weight:400;letter-spacing:0;">(filtro activo)</span>' : ''}</div>
+      <div class="exec-card-title"><span class="dot" style="${spiDot}"></span>Salud del portafolio${saludFilter ? ' <span style="font-size:11px;color:var(--accent);font-weight:400;letter-spacing:0;">(filtro activo)</span>' : ''}</div>
       <div class="exec-body">${spiText}<br>${alertLines.join('<br>')}</div>
     </div>
     <div class="exec-card">
@@ -1598,7 +1621,7 @@ function renderDetailRow(p) {
     return `<div class="hito-detail-row">
       <div class="hito-name-d">${h.nombre}</div>
       <div class="hito-timeline"><div class="bar-real" style="width:${barW}%;background:${color};"></div></div>
-      <div class="hito-status-d"><span class="mini-badge" style="background:${color}18;color:${color};border:1px solid ${color}33;">${label}</span>${desvText ? ` <span style="font-size:7px;color:${desvColor};">${desvText}</span>` : ''}</div>
+      <div class="hito-status-d"><span class="mini-badge" style="background:${color}18;color:${color};border:1px solid ${color}33;">${label}</span>${desvText ? ` <span style="font-size:11px;color:${desvColor};">${desvText}</span>` : ''}</div>
     </div>`;
   }).join('');
 
@@ -1616,7 +1639,7 @@ function renderDetailRow(p) {
         </div>
         <div style="padding-left:16px;">
           <div class="detail-hitos-title">Información del proyecto</div>
-          <div style="font-size:10px;color:var(--text);line-height:2;">
+          <div style="font-size:11px;color:var(--text);line-height:2;">
             <strong>Cuenta:</strong> ${esc(p.cuenta)}<br>
             <strong>PM:</strong> ${esc(p.pm)}<br>
             <strong>KAM:</strong> ${p.kam || '—'}<br>
@@ -1660,7 +1683,7 @@ function renderChartHitos(){
   });
   const datasetMap = ['Atrasado','Cumplido con retraso','Pendiente','Cumplido a tiempo'];
   destroyChart('chartHitos');
-  charts.chartHitos=new Chart(document.getElementById('chartHitos'),{type:'bar',data:{labels:data.map(d=>trunc(d.hito,20)),datasets:[{label:'Atrasado',data:data.map(d=>d.atrasado),backgroundColor:COLORS.danger},{label:'C. retraso',data:data.map(d=>d.conRetraso),backgroundColor:COLORS.warn},{label:'Pendiente',data:data.map(d=>d.pendiente),backgroundColor:COLORS.pending},{label:'A tiempo',data:data.map(d=>d.aTiempo),backgroundColor:COLORS.accent}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:8}}}},scales:{x:{stacked:true,grid:{color:'rgba(41,60,71,0.3)'},ticks:{font:{size:8}}},y:{stacked:true,grid:{display:false},ticks:{font:{size:8}}}},
+  charts.chartHitos=new Chart(document.getElementById('chartHitos'),{type:'bar',data:{labels:data.map(d=>trunc(d.hito,20)),datasets:[{label:'Atrasado',data:data.map(d=>d.atrasado),backgroundColor:COLORS.danger},{label:'C. retraso',data:data.map(d=>d.conRetraso),backgroundColor:COLORS.warn},{label:'Pendiente',data:data.map(d=>d.pendiente),backgroundColor:COLORS.pending},{label:'A tiempo',data:data.map(d=>d.aTiempo),backgroundColor:COLORS.accent}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:10}}}},scales:{x:{stacked:true,grid:{color:'rgba(41,60,71,0.3)'},ticks:{font:{size:10}}},y:{stacked:true,grid:{display:false},ticks:{font:{size:10}}}},
     onClick:(evt,els)=>{
       if(!els.length) return;
       const hitoIdx = els[0].index;
@@ -1745,21 +1768,21 @@ function renderChartFases(){
   if (chartFilterSource === 'chartFases') return;
   const c=countBy(filteredProyectos,'faseActual'); destroyChart('chartFases');
   const labels=Object.keys(c);
-  charts.chartFases=new Chart(document.getElementById('chartFases'),{type:'doughnut',data:{labels,datasets:[{data:Object.values(c),backgroundColor:COLORS.palette.slice(0,labels.length),borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:'50%',plugins:{legend:{position:'right',labels:{font:{size:8},padding:5}}},onClick:(evt,els)=>{if(els.length){const idx=els[0].index;setChartFilter('faseActual',labels[idx],'chartFases');}}}});
+  charts.chartFases=new Chart(document.getElementById('chartFases'),{type:'doughnut',data:{labels,datasets:[{data:Object.values(c),backgroundColor:COLORS.palette.slice(0,labels.length),borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:'50%',plugins:{legend:{position:'right',labels:{font:{size:10},padding:5}}},onClick:(evt,els)=>{if(els.length){const idx=els[0].index;setChartFilter('faseActual',labels[idx],'chartFases');}}}});
 }
 
 function renderChartProv(){
   if (chartFilterSource === 'chartProv') return;
   const c=countBy(filteredProyectos,'tipoProv'); destroyChart('chartProv');
   const labels=Object.keys(c);
-  charts.chartProv=new Chart(document.getElementById('chartProv'),{type:'doughnut',data:{labels,datasets:[{data:Object.values(c),backgroundColor:[COLORS.accent,COLORS.pending,COLORS.warn,COLORS.teal],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:'50%',plugins:{legend:{position:'bottom',labels:{font:{size:8},padding:5}}},onClick:(evt,els)=>{if(els.length){const idx=els[0].index;setChartFilter('tipoProv',labels[idx],'chartProv');}}}});
+  charts.chartProv=new Chart(document.getElementById('chartProv'),{type:'doughnut',data:{labels,datasets:[{data:Object.values(c),backgroundColor:[COLORS.accent,COLORS.pending,COLORS.warn,COLORS.teal],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:'50%',plugins:{legend:{position:'bottom',labels:{font:{size:10},padding:5}}},onClick:(evt,els)=>{if(els.length){const idx=els[0].index;setChartFilter('tipoProv',labels[idx],'chartProv');}}}});
 }
 
 function renderChartPM(){
   if (chartFilterSource === 'chartPM') return;
   const c=countBy(filteredProyectos,'pm');
   const s=Object.entries(c).sort((a,b)=>b[1]-a[1]); const fullLabels=s.map(x=>x[0]); destroyChart('chartPM');
-  charts.chartPM=new Chart(document.getElementById('chartPM'),{type:'bar',data:{labels:s.map(x=>trunc(x[0],14)),datasets:[{data:s.map(x=>x[1]),backgroundColor:COLORS.accent+'88',borderColor:COLORS.accent,borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,grid:{color:'rgba(41,60,71,0.3)'},ticks:{font:{size:8}}},x:{grid:{display:false},ticks:{font:{size:7},maxRotation:45}}},onClick:(evt,els)=>{if(els.length){const idx=els[0].index;setChartFilter('pm',fullLabels[idx],'chartPM');}}}});
+  charts.chartPM=new Chart(document.getElementById('chartPM'),{type:'bar',data:{labels:s.map(x=>trunc(x[0],14)),datasets:[{data:s.map(x=>x[1]),backgroundColor:COLORS.accent+'88',borderColor:COLORS.accent,borderWidth:1}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,grid:{color:'rgba(41,60,71,0.3)'},ticks:{font:{size:10}}},x:{grid:{display:false},ticks:{font:{size:10},maxRotation:45}}},onClick:(evt,els)=>{if(els.length){const idx=els[0].index;setChartFilter('pm',fullLabels[idx],'chartPM');}}}});
 }
 
 // Por Tipo — doughnut
@@ -1767,7 +1790,7 @@ function renderChartTipo(){
   if (chartFilterSource === 'chartTipo') return;
   const c=countBy(filteredProyectos,'tipo'); destroyChart('chartTipo');
   const labels=Object.keys(c);
-  charts.chartTipo=new Chart(document.getElementById('chartTipo'),{type:'doughnut',data:{labels,datasets:[{data:Object.values(c),backgroundColor:[COLORS.accent,COLORS.pending,COLORS.warn,COLORS.teal,COLORS.spi],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:'50%',plugins:{legend:{position:'right',labels:{font:{size:8},padding:5}}},onClick:(evt,els)=>{if(els.length){const idx=els[0].index;setChartFilter('tipo',labels[idx],'chartTipo');}}}});
+  charts.chartTipo=new Chart(document.getElementById('chartTipo'),{type:'doughnut',data:{labels,datasets:[{data:Object.values(c),backgroundColor:[COLORS.accent,COLORS.pending,COLORS.warn,COLORS.teal,COLORS.spi],borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:'50%',plugins:{legend:{position:'right',labels:{font:{size:10},padding:5}}},onClick:(evt,els)=>{if(els.length){const idx=els[0].index;setChartFilter('tipo',labels[idx],'chartTipo');}}}});
 }
 
 // Cuenta — horizontal bar (many values, better for comparison)
@@ -1775,14 +1798,14 @@ function renderChartCuenta(){
   if (chartFilterSource === 'chartCuenta') return;
   const c=countBy(filteredProyectos,'cuenta');
   const s=Object.entries(c).sort((a,b)=>b[1]-a[1]).slice(0,10); const fullLabels=s.map(x=>x[0]); destroyChart('chartCuenta');
-  charts.chartCuenta=new Chart(document.getElementById('chartCuenta'),{type:'bar',data:{labels:s.map(x=>trunc(x[0],14)),datasets:[{data:s.map(x=>x[1]),backgroundColor:COLORS.teal+'88',borderColor:COLORS.teal,borderWidth:1}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,grid:{color:'rgba(41,60,71,0.3)'},ticks:{font:{size:8}}},y:{grid:{display:false},ticks:{font:{size:7}}}},onClick:(evt,els)=>{if(els.length){const idx=els[0].index;setChartFilter('cuenta',fullLabels[idx],'chartCuenta');}}}});
+  charts.chartCuenta=new Chart(document.getElementById('chartCuenta'),{type:'bar',data:{labels:s.map(x=>trunc(x[0],14)),datasets:[{data:s.map(x=>x[1]),backgroundColor:COLORS.teal+'88',borderColor:COLORS.teal,borderWidth:1}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,grid:{color:'rgba(41,60,71,0.3)'},ticks:{font:{size:10}}},y:{grid:{display:false},ticks:{font:{size:10}}}},onClick:(evt,els)=>{if(els.length){const idx=els[0].index;setChartFilter('cuenta',fullLabels[idx],'chartCuenta');}}}});
 }
 
 function renderChartEntidad(){
   if (chartFilterSource === 'chartEntidad') return;
   const c=countBy(filteredProyectos,'entidadFed');
   const s=Object.entries(c).sort((a,b)=>b[1]-a[1]).slice(0,10); const fullLabels=s.map(x=>x[0]); destroyChart('chartEntidad');
-  charts.chartEntidad=new Chart(document.getElementById('chartEntidad'),{type:'bar',data:{labels:s.map(x=>trunc(x[0],16)),datasets:[{data:s.map(x=>x[1]),backgroundColor:COLORS.pending+'77',borderColor:COLORS.pending,borderWidth:1}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,grid:{color:'rgba(41,60,71,0.3)'},ticks:{font:{size:8}}},y:{grid:{display:false},ticks:{font:{size:8}}}},onClick:(evt,els)=>{if(els.length){const idx=els[0].index;setChartFilter('entidadFed',fullLabels[idx],'chartEntidad');}}}});
+  charts.chartEntidad=new Chart(document.getElementById('chartEntidad'),{type:'bar',data:{labels:s.map(x=>trunc(x[0],16)),datasets:[{data:s.map(x=>x[1]),backgroundColor:COLORS.pending+'77',borderColor:COLORS.pending,borderWidth:1}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,grid:{color:'rgba(41,60,71,0.3)'},ticks:{font:{size:10}}},y:{grid:{display:false},ticks:{font:{size:10}}}},onClick:(evt,els)=>{if(els.length){const idx=els[0].index;setChartFilter('entidadFed',fullLabels[idx],'chartEntidad');}}}});
 }
 
 // Rendimiento por subcontratista — horizontal bar
@@ -1818,7 +1841,7 @@ function renderChartSubcontratista(){
   if (!cvs) return;
   if (!entries.length) { cvs.style.display = 'none'; return; }
   cvs.style.display = '';
-  charts.chartSubcontratista = new Chart(cvs, { type: 'bar', data: { labels: entries.map(e => trunc(e.name, 18)), datasets: [{ data: entries.map(e => e.pct), backgroundColor: entries.map(e => e.pct >= 50 ? COLORS.accent + '88' : e.pct >= 25 ? COLORS.warn + '88' : COLORS.danger + '88'), borderWidth: 0 }] }, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => { const e = entries[ctx.dataIndex]; return `${e.pct}% a tiempo (${e.total} hitos)`; } } } }, scales: { x: { min: 0, max: 100, grid: { color: 'rgba(41,60,71,0.3)' }, title: { display: true, text: '% a tiempo', color: '#5a5858', font: { size: 9 } }, ticks: { font: { size: 8 } } }, y: { grid: { display: false }, ticks: { font: { size: 7 } } } } } });
+  charts.chartSubcontratista = new Chart(cvs, { type: 'bar', data: { labels: entries.map(e => trunc(e.name, 18)), datasets: [{ data: entries.map(e => e.pct), backgroundColor: entries.map(e => e.pct >= 50 ? COLORS.accent + '88' : e.pct >= 25 ? COLORS.warn + '88' : COLORS.danger + '88'), borderWidth: 0 }] }, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => { const e = entries[ctx.dataIndex]; return `${e.pct}% a tiempo (${e.total} hitos)`; } } } }, scales: { x: { min: 0, max: 100, grid: { color: 'rgba(41,60,71,0.3)' }, title: { display: true, text: '% a tiempo', color: '#5a5858', font:{size:10} }, ticks: { font:{size:10} } }, y: { grid: { display: false }, ticks: { font:{size:10} } } } } });
 }
 
 // ─── TAB 2 ───────────────────────────────────
@@ -1830,9 +1853,21 @@ function renderKPIs2(){
   const srcDesv=aggDesvPorHito('desviacionNeta',true)||rawData.promedioDesviacionNeta||rawData.promedioDesviacion||[];
   const avgD=srcDesv.length?(srcDesv.reduce((s,d)=>s+d.promedioDias,0)/srcDesv.length).toFixed(1):'—';
   const crit=rawData.proyectoCritico;
+  // La neta ya descuenta los On Hold de la hoja Desviaciones; sin mostrarlos, el usuario ve un número
+  // menor al del Sheet y no entiende por qué. Se expone bruta + OH total (máx. por proyecto, porque
+  // "Días On Hold Aplicables" es acumulado por hito) usando la misma agregación que el KPI.
+  const srcBruta=aggDesvPorHito('diasDesviacion',true);
+  const avgBruta=srcBruta&&srcBruta.length?(srcBruta.reduce((s,d)=>s+d.promedioDias,0)/srcBruta.length):null;
+  const projSet=new Set(p.map(x=>x.proj));
+  const ohPorProj={};
+  (rawData.desviaciones||[]).forEach(d=>{ if(projSet.has(d.proj)) ohPorProj[d.proj]=Math.max(ohPorProj[d.proj]||0,d.diasOnHold||0); });
+  const ohProjs=Object.values(ohPorProj).filter(v=>v>0);
+  const ohTotal=ohProjs.reduce((s,v)=>s+v,0);
+  const subNeta=avgBruta!==null?`bruta ${avgBruta.toFixed(1)} d − On Hold`:'sin días On Hold';
   const cards=[
     {label:'% Hitos a tiempo',value:pctAT+'%',sub:`${totalAT} de ${totalH}`,cls:'c-accent'},
-    {label:'Desv. neta promedio',value:avgD+' d',sub:'sin días On Hold',cls:'c-warn'},
+    {label:'Desv. neta promedio',value:avgD+' d',sub:subNeta,cls:'c-warn'},
+    {label:'Días On Hold',value:ohTotal.toLocaleString('es-MX')+' d',sub:ohProjs.length?`${ohProjs.length} de ${p.length} proyecto${p.length>1?'s':''} con On Hold`:'sin On Hold registrado',cls:'c-neutral'},
     {label:'Proyecto crítico',value:crit?crit.proj:'—',sub:crit?`${crit.conteos.atrasados} atr · ${trunc(crit.sitio,18)}`:'',cls:'c-danger'},
     {label:'Hitos evaluados',value:totalH,sub:'portafolio total',cls:'c-neutral'},
   ];
@@ -1866,17 +1901,22 @@ function aggDesvPorHito(campo, cerrada){
 
 function renderChartDesviacion(){
   const data=aggDesvPorHito('desviacionNeta',true)||[...(rawData.promedioDesviacionNeta||rawData.promedioDesviacion||[])].sort((a,b)=>b.promedioDias-a.promedioDias); destroyChart('chartDesviacion');
-  charts.chartDesviacion=new Chart(document.getElementById('chartDesviacion'),{type:'bar',data:{labels:data.map(d=>trunc(d.hito,20)),datasets:[{data:data.map(d=>d.promedioDias),backgroundColor:data.map(d=>d.promedioDias>30?COLORS.danger+'cc':d.promedioDias>15?COLORS.warn+'cc':COLORS.accent+'88'),borderWidth:0}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,grid:{color:'rgba(41,60,71,0.3)'},title:{display:true,text:'Días',color:'#5a5858',font:{size:9}},ticks:{font:{size:8}}},y:{grid:{display:false},ticks:{font:{size:8}}}}}});
+  charts.chartDesviacion=new Chart(document.getElementById('chartDesviacion'),{type:'bar',data:{labels:data.map(d=>trunc(d.hito,20)),datasets:[{data:data.map(d=>d.promedioDias),backgroundColor:data.map(d=>d.promedioDias>30?COLORS.danger+'cc':d.promedioDias>15?COLORS.warn+'cc':COLORS.accent+'88'),borderWidth:0}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,grid:{color:'rgba(41,60,71,0.3)'},title:{display:true,text:'Días',color:'#5a5858',font:{size:10}},ticks:{font:{size:10}}},y:{grid:{display:false},ticks:{font:{size:10}}}}}});
 }
 
 function renderChartDesviacionAbierta(){
   const cvs=document.getElementById('chartDesviacionAbierta'); if(!cvs) return;
-  const data=aggDesvPorHito('diasDesviacion',false)||[...(rawData.promedioDesviacionAbierta||[])].sort((a,b)=>b.promedioDias-a.promedioDias);
+  // Neta (sin On Hold) para que refleje lo accionable por Operaciones; la bruta queda en el tooltip.
+  // Filas abiertas sin neta en el Sheet se omiten aquí (aggDesvPorHito ignora nulos); revisar si Desviaciones deja vacía esa columna.
+  const bruta=aggDesvPorHito('diasDesviacion',false);
+  const netaAgg=aggDesvPorHito('desviacionNeta',false);
+  const brutaMap=Object.fromEntries((bruta||[]).map(d=>[d.hito,d.promedioDias]));
+  const data=netaAgg?netaAgg.map(d=>({...d,bruta:brutaMap[d.hito]})):[...(rawData.promedioDesviacionAbierta||[])].sort((a,b)=>b.promedioDias-a.promedioDias);
   destroyChart('chartDesviacionAbierta');
   const card=cvs.closest('.chart-card');
   if(!data.length){ if(card) card.style.display='none'; return; }
   if(card) card.style.display='';
-  charts.chartDesviacionAbierta=new Chart(cvs,{type:'bar',data:{labels:data.map(d=>trunc(d.hito,20)),datasets:[{data:data.map(d=>d.promedioDias),backgroundColor:data.map(d=>d.promedioDias>90?COLORS.danger+'cc':d.promedioDias>30?COLORS.warn+'cc':COLORS.accent+'88'),borderWidth:0}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>{const d=data[ctx.dataIndex];return `${d.promedioDias} días promedio · ${d.totalMuestras} hito${d.totalMuestras>1?'s':''} pendiente${d.totalMuestras>1?'s':''}`;}}}},scales:{x:{beginAtZero:true,grid:{color:'rgba(41,60,71,0.3)'},title:{display:true,text:'Días acumulados a hoy',color:'#5a5858',font:{size:9}},ticks:{font:{size:8}}},y:{grid:{display:false},ticks:{font:{size:8}}}}}});
+  charts.chartDesviacionAbierta=new Chart(cvs,{type:'bar',data:{labels:data.map(d=>trunc(d.hito,20)),datasets:[{data:data.map(d=>d.promedioDias),backgroundColor:data.map(d=>d.promedioDias>90?COLORS.danger+'cc':d.promedioDias>30?COLORS.warn+'cc':COLORS.accent+'88'),borderWidth:0}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>{const d=data[ctx.dataIndex];return `${d.promedioDias} d netos${d.bruta!==undefined?` (bruta ${d.bruta} d)`:''} · ${d.totalMuestras} hito${d.totalMuestras>1?'s':''} pendiente${d.totalMuestras>1?'s':''}`;}}}},scales:{x:{beginAtZero:true,grid:{color:'rgba(41,60,71,0.3)'},title:{display:true,text:'Días acumulados a hoy',color:'#5a5858',font:{size:10}},ticks:{font:{size:10}}},y:{grid:{display:false},ticks:{font:{size:10}}}}}});
 }
 
 function renderChartDuracionFases(){
@@ -1941,7 +1981,7 @@ function renderChartDuracionFases(){
     options:{
       indexAxis:'y', responsive:true, maintainAspectRatio:false,
       plugins:{
-        legend:{display:true, position:'top', labels:{font:{size:9}, padding:12, boxWidth:10}},
+        legend:{display:true, position:'top', labels:{font:{size:10}, padding:12, boxWidth:10}},
         tooltip:{callbacks:{
           title: ctx => ctx[0].label,
           label: ctx => {
@@ -1961,8 +2001,8 @@ function renderChartDuracionFases(){
         }}
       },
       scales:{
-        x:{beginAtZero:true, grid:{color:'rgba(41,60,71,0.3)'}, title:{display:true, text:'Semanas', color:'#5a5858', font:{size:9}}, ticks:{font:{size:8}}},
-        y:{grid:{display:false}, ticks:{font:{size:9}}}
+        x:{beginAtZero:true, grid:{color:'rgba(41,60,71,0.3)'}, title:{display:true, text:'Semanas', color:'#5a5858', font:{size:10}}, ticks:{font:{size:10}}},
+        y:{grid:{display:false}, ticks:{font:{size:10}}}
       }
     }
   });
@@ -1976,7 +2016,7 @@ function renderChartRendPM(){
     return {x:s.tot?+((s.at/s.tot)*100).toFixed(1):0,y:s.n,name,spi};
   });
   destroyChart('chartRendPM');
-  charts.chartRendPM=new Chart(document.getElementById('chartRendPM'),{type:'bubble',data:{datasets:[{data:pts.map(p=>({x:p.x,y:p.y,r:Math.max(5,p.y*1.8)})),backgroundColor:pts.map(p=>spiColor(p.spi)+'55'),borderColor:pts.map(p=>spiColor(p.spi)),borderWidth:1.5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>{const p=pts[ctx.dataIndex];const spiStr=p.spi!==null?p.spi.toFixed(2):'—';return `${p.name}: ${p.x}% a tiempo · ${p.y} proy · SPI ${spiStr}`;}}}},scales:{x:{title:{display:true,text:'% hitos a tiempo',color:'#5a5858',font:{size:9}},min:0,max:100,grid:{color:'rgba(41,60,71,0.3)'},ticks:{font:{size:8}}},y:{title:{display:true,text:'Proyectos',color:'#5a5858',font:{size:9}},beginAtZero:true,grid:{color:'rgba(41,60,71,0.3)'},ticks:{font:{size:8}}}}}});
+  charts.chartRendPM=new Chart(document.getElementById('chartRendPM'),{type:'bubble',data:{datasets:[{data:pts.map(p=>({x:p.x,y:p.y,r:Math.max(5,p.y*1.8)})),backgroundColor:pts.map(p=>spiColor(p.spi)+'55'),borderColor:pts.map(p=>spiColor(p.spi)),borderWidth:1.5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>{const p=pts[ctx.dataIndex];const spiStr=p.spi!==null?p.spi.toFixed(2):'—';return `${p.name}: ${p.x}% a tiempo · ${p.y} proy · SPI ${spiStr}`;}}}},scales:{x:{title:{display:true,text:'% hitos a tiempo',color:'#5a5858',font:{size:10}},min:0,max:100,grid:{color:'rgba(41,60,71,0.3)'},ticks:{font:{size:10}}},y:{title:{display:true,text:'Proyectos',color:'#5a5858',font:{size:10}},beginAtZero:true,grid:{color:'rgba(41,60,71,0.3)'},ticks:{font:{size:10}}}}}});
 }
 
 function renderTreemap(){
@@ -1988,7 +2028,7 @@ function renderTreemap(){
   ct.innerHTML=`<div style="display:flex;flex-wrap:wrap;gap:2px;height:200px;">${sorted.map(([f,n],i)=>{
     const pct=n/total*100;const col=COLORS.palette[i%COLORS.palette.length];
     const isActive=treemapActiveFase===f;
-    return `<div class="treemap-block${isActive?' active':''}" onclick="toggleTreemapFase('${esc(f)}')" style="flex:${pct} 1 0;min-width:50px;background:${col}1a;border:1px solid ${col}33;padding:8px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;border-radius:2px;"><div style="font-family:var(--font-display);font-weight:800;font-size:18px;color:${col}">${n}</div><div style="font-size:8px;color:var(--text2);letter-spacing:1px;text-transform:uppercase;margin-top:2px;">${trunc(f,16)}</div><div style="font-size:8px;color:var(--text3)">${pct.toFixed(0)}%</div></div>`;
+    return `<div class="treemap-block${isActive?' active':''}" onclick="toggleTreemapFase('${esc(f)}')" style="flex:${pct} 1 0;min-width:50px;background:${col}1a;border:1px solid ${col}33;padding:8px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;border-radius:2px;"><div style="font-family:var(--font-display);font-weight:800;font-size:18px;color:${col}">${n}</div><div style="font-size:11px;color:var(--text2);letter-spacing:1px;text-transform:uppercase;margin-top:2px;">${trunc(f,16)}</div><div style="font-size:11px;color:var(--text3)">${pct.toFixed(0)}%</div></div>`;
   }).join('')}</div>`;
   renderTreemapDetail();
 }
@@ -2063,7 +2103,7 @@ function renderChartCuentaRendimiento(){
   filteredProyectos.forEach(p=>{if(!p.cuenta)return;if(!cs[p.cuenta])cs[p.cuenta]={at:0,tot:0};cs[p.cuenta].at+=p.conteos.aTiempo;cs[p.cuenta].tot+=p.conteos.total;});
   const e=Object.entries(cs).map(([c,s])=>({cuenta:c,pct:s.tot?+((s.at/s.tot)*100).toFixed(1):0})).sort((a,b)=>b.pct-a.pct).slice(0,12);
   destroyChart('chartCuentaRendimiento');
-  charts.chartCuentaRendimiento=new Chart(document.getElementById('chartCuentaRendimiento'),{type:'bar',data:{labels:e.map(x=>trunc(x.cuenta,16)),datasets:[{data:e.map(x=>x.pct),backgroundColor:e.map(x=>x.pct>=70?COLORS.accent+'88':x.pct>=40?COLORS.warn+'88':COLORS.danger+'88'),borderWidth:0}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{min:0,max:100,grid:{color:'rgba(41,60,71,0.3)'},title:{display:true,text:'%',color:'#5a5858',font:{size:9}},ticks:{font:{size:8}}},y:{grid:{display:false},ticks:{font:{size:8}}}}}});
+  charts.chartCuentaRendimiento=new Chart(document.getElementById('chartCuentaRendimiento'),{type:'bar',data:{labels:e.map(x=>trunc(x.cuenta,16)),datasets:[{data:e.map(x=>x.pct),backgroundColor:e.map(x=>x.pct>=70?COLORS.accent+'88':x.pct>=40?COLORS.warn+'88':COLORS.danger+'88'),borderWidth:0}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{min:0,max:100,grid:{color:'rgba(41,60,71,0.3)'},title:{display:true,text:'%',color:'#5a5858',font:{size:10}},ticks:{font:{size:10}}},y:{grid:{display:false},ticks:{font:{size:10}}}}}});
 }
 
 function renderCuentaTable(){
@@ -2124,20 +2164,20 @@ function renderCuentaTable(){
     if (isExpanded) {
       // Child header row
       html += `<tr class="cuenta-child-row"><td></td><td colspan="9" style="padding:0 !important;">
-        <table style="width:100%;border-collapse:collapse;font-size:9px;">
+        <table style="width:100%;border-collapse:collapse;font-size:11px;">
           <thead><tr style="background:var(--surface);">
-            <th style="padding:4px 8px;text-align:left;font-size:7px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);font-weight:600;">PROJ</th>
-            <th style="padding:4px 8px;text-align:left;font-size:7px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);font-weight:600;">Sitio</th>
-            <th style="padding:4px 8px;text-align:left;font-size:7px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);font-weight:600;">PM</th>
-            <th style="padding:4px 8px;text-align:left;font-size:7px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);font-weight:600;">KAM</th>
-            <th style="padding:4px 8px;text-align:left;font-size:7px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);font-weight:600;">SPI</th>
-            <th style="padding:4px 8px;text-align:left;font-size:7px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);font-weight:600;">Atr</th>
-            <th style="padding:4px 8px;text-align:left;font-size:7px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);font-weight:600;">Ret</th>
-            <th style="padding:4px 8px;text-align:left;font-size:7px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);font-weight:600;">OK</th>
-            <th style="padding:4px 8px;text-align:left;font-size:7px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);font-weight:600;">Días OH</th>
-            <th style="padding:4px 8px;text-align:left;font-size:7px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);font-weight:600;">Desv. Neta</th>
-            <th style="padding:4px 8px;text-align:left;font-size:7px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);font-weight:600;">Comentarios de Retraso</th>
-            <th style="padding:4px 8px;text-align:left;font-size:7px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);font-weight:600;">Área Resp.</th>
+            <th style="padding:4px 8px;text-align:left;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);font-weight:600;">PROJ</th>
+            <th style="padding:4px 8px;text-align:left;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);font-weight:600;">Sitio</th>
+            <th style="padding:4px 8px;text-align:left;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);font-weight:600;">PM</th>
+            <th style="padding:4px 8px;text-align:left;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);font-weight:600;">KAM</th>
+            <th style="padding:4px 8px;text-align:left;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);font-weight:600;">SPI</th>
+            <th style="padding:4px 8px;text-align:left;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);font-weight:600;">Atr</th>
+            <th style="padding:4px 8px;text-align:left;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);font-weight:600;">Ret</th>
+            <th style="padding:4px 8px;text-align:left;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);font-weight:600;">OK</th>
+            <th style="padding:4px 8px;text-align:left;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);font-weight:600;">Días OH</th>
+            <th style="padding:4px 8px;text-align:left;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);font-weight:600;">Desv. Neta</th>
+            <th style="padding:4px 8px;text-align:left;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);font-weight:600;">Comentarios de Retraso</th>
+            <th style="padding:4px 8px;text-align:left;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text3);font-weight:600;">Área Resp.</th>
           </tr></thead><tbody>`;
 
       s.projects.forEach(p => {
@@ -2145,7 +2185,7 @@ function renderCuentaTable(){
         const pSpiStr = pSpi !== null ? pSpi.toFixed(2) : '—';
         const dv = desvLookup[p.proj] || {};
         html += `<tr style="border-bottom:1px solid rgba(41,60,71,0.15);">
-          <td style="padding:4px 8px;">${adoDot(p.estatusAdO)}<span class="proj-id" style="font-size:9px;">${esc(p.proj)}</span></td>
+          <td style="padding:4px 8px;">${adoDot(p.estatusAdO)}<span class="proj-id" style="font-size:11px;">${esc(p.proj)}</span></td>
           <td style="padding:4px 8px;color:var(--text2);white-space:normal;">${esc(p.sitio)}</td>          
           <td style="padding:4px 8px;color:var(--text2);">${trunc(p.pm, 16)}</td>
           <td style="padding:4px 8px;color:var(--text2);">${trunc(p.kam || '—', 14)}</td>
@@ -2367,7 +2407,7 @@ function renderGantt() {
   prons.forEach(p => {
     const closed = isProjectClosed(p);
     const rowOpacity = closed ? ' style="opacity:.45;"' : '';
-    const lbl = `<span class="proj-id">${esc(p.proj)}</span> <span style="color:var(--text2);font-size:8px;">${trunc(p.sitio, 45)}</span>`;    tbody += `<tr${rowOpacity}><td class="gantt-label-cell" title="${esc(p.cuenta)} — ${esc(p.faseActual)}${closed ? ' [CERRADO]' : ''}">${lbl}${closed ? '<span style="font-size:7px;color:var(--text3);margin-left:4px;">✓</span>' : ''}</td>`;
+    const lbl = `<span class="proj-id">${esc(p.proj)}</span> <span style="color:var(--text2);font-size:11px;">${trunc(p.sitio, 45)}</span>`;    tbody += `<tr${rowOpacity}><td class="gantt-label-cell" title="${esc(p.cuenta)} — ${esc(p.faseActual)}${closed ? ' [CERRADO]' : ''}">${lbl}${closed ? '<span style="font-size:11px;color:var(--text3);margin-left:4px;">✓</span>' : ''}</td>`;
     tbody += `<td colspan="${cols.length}" style="position:relative;min-width:${cols.length * colW}px;">`;
 
     // Today line
@@ -2460,8 +2500,8 @@ function renderScatterCrono() {
         tooltip: { callbacks: { label: ctx => { const p = pts[ctx.dataIndex]; return `${p.name} (${p.cuenta}): ${p.y}d desv · ${p.x.toFixed(0)}%${p.closed ? ' [cerrado]' : ''}`; } } }
       },
       scales: {
-        x: { title: { display: true, text: '% pronóstico', color: '#5a5858', font: { size: 9 } }, min: 0, max: 105, grid: { color: 'rgba(41,60,71,0.3)' }, ticks: { font: { size: 8 } } },
-        y: { title: { display: true, text: 'Días desviación (abs)', color: '#5a5858', font: { size: 9 } }, beginAtZero: true, grid: { color: 'rgba(41,60,71,0.3)' }, ticks: { font: { size: 8 } } }
+        x: { title: { display: true, text: '% pronóstico', color: '#5a5858', font:{size:10} }, min: 0, max: 105, grid: { color: 'rgba(41,60,71,0.3)' }, ticks: { font:{size:10} } },
+        y: { title: { display: true, text: 'Días desviación (abs)', color: '#5a5858', font:{size:10} }, beginAtZero: true, grid: { color: 'rgba(41,60,71,0.3)' }, ticks: { font:{size:10} } }
       }
     },
     plugins: [{
@@ -2523,8 +2563,8 @@ function renderScatterRatio() {
         tooltip: { filter: ctx => ctx.datasetIndex === 0, callbacks: { label: ctx => { const p = pts[ctx.dataIndex]; return `${p.name} (${p.cuenta}): ratio ${p.y.toFixed(2)} (${p.semReal}/${p.semEsp} sem)${p.closed ? ' [cerrado]' : ''}`; } } }
       },
       scales: {
-        x: { title: { display: true, text: 'Semanas esperadas', color: '#5a5858', font: { size: 9 } }, beginAtZero: true, grid: { color: 'rgba(41,60,71,0.3)' }, ticks: { font: { size: 8 } } },
-        y: { title: { display: true, text: 'Ratio (real / esperado)', color: '#5a5858', font: { size: 9 } }, beginAtZero: true, grid: { color: 'rgba(41,60,71,0.3)' }, ticks: { font: { size: 8 } } }
+        x: { title: { display: true, text: 'Semanas esperadas', color: '#5a5858', font:{size:10} }, beginAtZero: true, grid: { color: 'rgba(41,60,71,0.3)' }, ticks: { font:{size:10} } },
+        y: { title: { display: true, text: 'Ratio (real / esperado)', color: '#5a5858', font:{size:10} }, beginAtZero: true, grid: { color: 'rgba(41,60,71,0.3)' }, ticks: { font:{size:10} } }
       }
     }
   });
@@ -2578,14 +2618,14 @@ function renderForecastTable() {
     const isExp = forecastHitosDetailProj === p.proj;
 
     let rowHtml = `<tr data-proj="${esc(p.proj)}" class="clickable-row${isExp ? ' row-expanded' : ''}" style="${closed ? 'opacity:.5;' : ''}" onclick="toggleForecastRowDetail('${esc(p.proj).replace(/'/g, "\\'")}')">
-      <td><span class="proj-id">${esc(p.proj)}</span>${closed ? '<span style="font-size:7px;color:var(--text3);margin-left:3px;">✓</span>' : ''}</td>
+      <td><span class="proj-id">${esc(p.proj)}</span>${closed ? '<span style="font-size:11px;color:var(--text3);margin-left:3px;">✓</span>' : ''}</td>
       <td>${esc(p.cuenta)}</td>
       <td>${trunc(p.pm, 16)}</td>
       <td><span class="mini-badge" style="background:rgba(130,128,128,0.12);color:var(--text2);border:1px solid rgba(130,128,128,0.2);">${trunc(p.faseActual, 14)}</span></td>
       <td><div class="progress-cell"><div class="mini-bar"><div class="mini-bar-fill" style="width:${Math.min((p.pctPronostico || 0) * 100, 100)}%"></div></div><span class="progress-pct">${((p.pctPronostico || 0) * 100).toFixed(0)}%</span></div></td>
-      <td style="font-size:9px;">${fmtDate(p.fechaInicio)}</td>
-      <td style="font-size:9px;">${fmtDate(p.fechaFin)}</td>
-      <td style="font-size:9px;">${fmtDate(p.previstaCommissioning)}</td>
+      <td style="font-size:11px;">${fmtDate(p.fechaInicio)}</td>
+      <td style="font-size:11px;">${fmtDate(p.fechaFin)}</td>
+      <td style="font-size:11px;">${fmtDate(p.previstaCommissioning)}</td>
       <td><span class="desv-badge ${dc.cls}" title="${dc.label}">${diasStr}d</span></td>
       <td>${p.semanasEsperadas || '—'}</td>
       <td><span style="color:${(p.semanaActual || 0) > (p.semanasEsperadas || 0) ? 'var(--danger)' : 'var(--text)'};font-weight:${(p.semanaActual || 0) > (p.semanasEsperadas || 0) ? '600' : '400'}">${p.semanaActual || '—'}</span></td>
@@ -2724,7 +2764,7 @@ function renderTab4() {
     container.innerHTML = `<div class="insights-empty">
       <span class="empty-icon">◇</span>
       No hay insights disponibles aún.<br>
-      <span style="font-size:10px;color:var(--text3);">Los insights se generan automáticamente de lunes a sábado a las 8:00am y 3:00pm.</span>
+      <span style="font-size:11px;color:var(--text3);">Los insights se generan automáticamente de lunes a sábado a las 8:00am y 3:00pm.</span>
     </div>`;
     tsEl.textContent = '—';
     return;
