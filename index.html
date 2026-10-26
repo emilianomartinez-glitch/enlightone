@@ -190,12 +190,15 @@ button:focus-visible, select:focus-visible, input:focus-visible, [tabindex]:focu
   padding:0 !important; border-bottom:1px solid var(--border) !important;
   background:var(--surface2) !important;
 }
+/* La tabla de 15 columnas hace scroll horizontal; el detalle se ancla al ancho visible (sticky + cqw)
+   para que hitos e información sigan a la vista sin importar cuánto se haya scrolleado. */
 .detail-content {
+  position:sticky; left:0; width:100cqw; box-sizing:border-box;
   padding:12px 16px 14px;
   animation:fadeUp .25s ease both;
 }
 .detail-grid {
-  display:grid; grid-template-columns:1fr 1fr; gap:10px;
+  display:grid; grid-template-columns:minmax(0,1.7fr) minmax(0,1fr); gap:24px;
 }
 .detail-hitos-title {
   font-family:var(--font-display); font-weight:700; font-size:11px;
@@ -203,7 +206,9 @@ button:focus-visible, select:focus-visible, input:focus-visible, [tabindex]:focu
   margin-bottom:8px;
 }
 .hito-detail-row {
-  display:grid; grid-template-columns:180px 1fr 80px;
+  /* Ancho fijo para que todas las barras midan lo mismo; con max-content cada fila (cada una es su propio grid)
+     calculaba su propia columna y las barras quedaban de largo distinto. 200px cubre "A tiempo +126d vs plan". */
+  display:grid; grid-template-columns:180px minmax(40px,1fr) 200px;
   align-items:center; gap:8px; padding:3px 0;
   border-bottom:1px solid rgba(41,60,71,0.2);
   font-size:11px;
@@ -216,7 +221,7 @@ button:focus-visible, select:focus-visible, input:focus-visible, [tabindex]:focu
 .hito-timeline .bar-real {
   position:absolute; left:0; top:0; height:100%; border-radius:1px;
 }
-.hito-status-d { text-align:right; }
+.hito-status-d { text-align:right; white-space:nowrap; }
 .data-table tr.clickable-row { cursor:pointer; }
 .data-table tr.clickable-row:hover td { background:rgba(0,170,133,0.05); }
 .data-table tr.row-expanded td { background:rgba(0,170,133,0.04); border-bottom-color:transparent; }
@@ -247,7 +252,7 @@ button:focus-visible, select:focus-visible, input:focus-visible, [tabindex]:focu
 .table-header { padding:10px 16px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; background:var(--surface2); }
 .table-title { font-family:var(--font-display); font-weight:700; font-size:12px; }
 .table-count { font-size:11px; color:var(--text2); margin-left:8px; }
-.table-scroll { overflow-x:auto; max-height:360px; overflow-y:auto; }
+.table-scroll { container-type:inline-size; overflow-x:auto; max-height:360px; overflow-y:auto; }
 .data-table { width:100%; border-collapse:collapse; font-size:11px; }
 .data-table th { padding:7px 10px; text-align:left; font-family:var(--font-display); font-weight:600; font-size:11px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text3); border-bottom:1px solid var(--border); white-space:nowrap; background:var(--surface2); position:sticky; top:0; cursor:pointer; user-select:none; transition:color .15s; z-index:2; }
 .data-table th:hover { color:var(--accent); }
@@ -1615,13 +1620,18 @@ function renderDetailRow(p) {
 
     // Show deviation if available
     const desv = h.diasDesviacion;
-    const desvText = desv !== null && desv !== undefined ? `${desv > 0 ? '+' : ''}${desv}d` : '';
-    const desvColor = desv !== null ? (desv > 0 ? 'var(--danger)' : 'var(--accent)') : '';
+    // 0d no se muestra: junto a un badge de Retraso (On Hold absorbe la desviación) solo confunde; queda en el tooltip del badge.
+    const desvText = desv !== null && desv !== undefined && desv !== 0 ? `${desv > 0 ? '+' : ''}${desv}d` : '';
+    // Los días se miden contra la Prevista original (sin On Hold) y el badge contra la Tentativa vigente:
+    // en rojo solo si el badge también es negativo, para que un "A tiempo" no parezca contradecirse.
+    const desvNegativo = h.estatus==='Atrasado' || h.estatus==='Cumplido con retraso';
+    const desvColor = desv === null || desv === undefined ? '' : (desv > 0 ? (desvNegativo ? 'var(--danger)' : 'var(--ink-muted, var(--text2))') : 'var(--accent)');
+    const desvTip = `Desviación neta vs plan original (sin On Hold). Prevista: ${h.fechaPlan||'—'} · Tentativa: ${h.fechaTentativa||'—'} · Modificada: ${h.fechaModificada||'—'}`;
 
     return `<div class="hito-detail-row">
       <div class="hito-name-d">${h.nombre}</div>
       <div class="hito-timeline"><div class="bar-real" style="width:${barW}%;background:${color};"></div></div>
-      <div class="hito-status-d"><span class="mini-badge" style="background:${color}18;color:${color};border:1px solid ${color}33;">${label}</span>${desvText ? ` <span style="font-size:11px;color:${desvColor};">${desvText}</span>` : ''}</div>
+      <div class="hito-status-d"><span class="mini-badge" style="background:${color}18;color:${color};border:1px solid ${color}33;"${desv === 0 ? ` title="${esc(desvTip)}"` : ''}>${label}</span>${desvText ? ` <span style="font-size:11px;color:${desvColor};" title="${esc(desvTip)}">${desvText} vs plan</span>` : ''}</div>
     </div>`;
   }).join('');
 
@@ -2687,8 +2697,10 @@ function renderForecastDetailContent(proj) {
   // Deviation color for Modificada/Real date text — same diasDesviacion field/thresholds
   // used by desvCategory()/renderChartDesviacion() elsewhere in this file: on-plan/early
   // reads as the brand "on time" green, moderate lateness as warn, severe as danger.
-  const desvDateColor = dias => {
+  // "A tiempo" cumplió su fecha vigente: aunque haya días vs plan original, no se pinta de warn/danger.
+  const desvDateColor = (dias, estatus) => {
     if (dias === null || dias === undefined || isNaN(dias) || dias <= 0) return 'var(--accent)';
+    if (estatus === 'Cumplido a tiempo') return 'var(--ink-muted, var(--text2))';
     if (dias <= 30) return 'var(--warn)';
     return 'var(--danger)';
   };
@@ -2697,13 +2709,14 @@ function renderForecastDetailContent(proj) {
     const h = getHito(proyecto, nombre);
     const prevista = fmtDate(h?.fechaPlan);
     const tentativa = fmtDate(h?.fechaTentativa);
-    const dCol = desvDateColor(h?.diasDesviacion);
+    const dCol = desvDateColor(h?.diasDesviacion, h?.estatus);
+    const dTip = h?.diasDesviacion != null ? `${h.diasDesviacion > 0 ? '+' : ''}${h.diasDesviacion}d vs plan original (neta, sin On Hold)` : '';
     const modificadaCell = h?.fechaModificada
-      ? `<span style="color:${dCol};font-weight:600;">${fmtDate(h.fechaModificada)}</span>`
+      ? `<span style="color:${dCol};font-weight:600;" title="${esc(dTip)}">${fmtDate(h.fechaModificada)}</span>`
       : statusBadge(h?.estatus);
     const realDate = realByHito[nombre];
     const realCell = realDate
-      ? `<span style="color:${dCol};font-weight:600;">${fmtDate(realDate)}</span>`
+      ? `<span style="color:${dCol};font-weight:600;" title="${esc(dTip)}">${fmtDate(realDate)}</span>`
       : statusBadge(h?.estatus);
     return `<tr>
       <td>${esc(nombre)}</td>
